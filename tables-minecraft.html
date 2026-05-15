@@ -124,6 +124,17 @@ body::before {
 }
 .table-btn:active { transform: translateY(3px); box-shadow: none; }
 
+.table-btn-master {
+  grid-column: 1 / -1;
+  background: #0D1A2E; border: 3px solid var(--diamond);
+  color: var(--diamond); letter-spacing: 1px;
+  box-shadow: 0 3px 0 #001A2E;
+}
+.table-btn-master:hover, .table-btn-master.selected {
+  background: var(--diamond); color: #001A22;
+  border-color: #40C0E0; box-shadow: 0 3px 0 #003344;
+}
+
 .play-btn {
   background: #7A2020; border: 4px solid #AA3333; box-shadow: 0 5px 0 #3D0000;
   color: var(--gold); font-family: var(--pixelfont); font-size: 12px;
@@ -587,9 +598,16 @@ function initTableSelector() {
   for(let i=1;i<=10;i++){
     const b=document.createElement('button');
     b.className='table-btn'; b.textContent='×'+i;
+    b.dataset.table=i;
     b.onclick=()=>selectTable(i);
     el.appendChild(b);
   }
+  const mb=document.createElement('button');
+  mb.className='table-btn table-btn-master';
+  mb.dataset.table='all';
+  mb.textContent='⚔ TOUTES LES TABLES';
+  mb.onclick=()=>selectTable('all');
+  el.appendChild(mb);
   buildPips();
   renderTop3();
 }
@@ -620,7 +638,7 @@ function selectMode(m) {
 }
 function selectTable(t) {
   G.table=t;
-  document.querySelectorAll('.table-btn').forEach((b,i)=>b.classList.toggle('selected',i+1===t));
+  document.querySelectorAll('.table-btn').forEach(b=>b.classList.toggle('selected', b.dataset.table==t));
   checkReady();
 }
 function checkReady() {
@@ -638,7 +656,7 @@ function startGame() {
   resetState();
   G.mode=m; G.table=t; G.lastMode=m; G.lastTable=t;
   showScreen('screen-game');
-  document.getElementById('hud-table').textContent='×'+G.table;
+  document.getElementById('hud-table').textContent=G.table==='all'?'×ALL':'×'+G.table;
   document.getElementById('char-zombie').style.left=ZOMBIE_START+'%';
 
   setZombieArt('normal');
@@ -734,8 +752,9 @@ function updateHUD() {
 function nextQuestion() {
   if(G.gameOver) return;
   G.isBonus=(G.correctSinceLastBonus>=G.nextBonusAt);
+  const tableNum=G.table==='all'?(1+Math.floor(Math.random()*10)):G.table;
   const b=G.isBonus?(11+Math.floor(Math.random()*9)):(1+Math.floor(Math.random()*10));
-  G.question={a:G.table,b,answer:G.table*b};
+  G.question={a:tableNum,b,answer:tableNum*b};
   G.questionStart=Date.now();
 
   const qEl=document.getElementById('question-display');
@@ -974,7 +993,7 @@ function renderLBUI(newEntry){
     const row=document.createElement('div');
     const isNew=newEntry&&e.name===newEntry.name&&e.score===newEntry.score;
     row.className='lb-row'+(i===0?' lb-gold':i===1?' lb-silver':i===2?' lb-bronze':'')+(isNew?' lb-new':'');
-    row.innerHTML=`<span class="lb-rank">${i+1}.</span><span class="lb-name">${e.name}</span><span style="font-size:12px;color:#333">×${e.table}</span><span class="lb-score">${e.score}</span>`;
+    row.innerHTML=`<span class="lb-rank">${i+1}.</span><span class="lb-name">${e.name}</span><span style="font-size:12px;color:#333">×${e.table==='all'?'ALL':e.table}</span><span class="lb-score">${e.score}</span>`;
     el.appendChild(row);
   });
 }
