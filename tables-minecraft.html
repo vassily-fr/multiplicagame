@@ -525,22 +525,53 @@ const BIN_ID  = '6a071ea9adc21f119aa499ab';
 const BIN_KEY = '$2a$10$MivuzmyH7rz.Re4YYd7wWOktE5kbJzWp/KG6IeFaTTDnYNW77qS3W';
 const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
-const ZOMBIE_START = 2;   // % left edge
-const SHEEP_POS    = 84;  // % left — where sheep stands
-const DANGER_DIST  = 22;  // % distance = red zone
+// ┌─────────────────────────────────────────────────────────┐
+// │  TERRAIN                                                │
+// │  ZOMBIE_START : position départ zombie (% gauche)       │
+// │  SHEEP_POS    : position mouton (% gauche)              │
+// │  DANGER_DIST  : distance en % pour la zone rouge        │
+// └─────────────────────────────────────────────────────────┘
+const ZOMBIE_START = 2;
+const SHEEP_POS    = 84;
+const DANGER_DIST  = 22;
 
-const BASE_SPEED        = 0.030; // %/tick (100ms) — visible dès le départ
-const SPEED_PER_10OK    = 0.015; // vitesse ajoutée tous les 10 bonnes réponses
-const MAX_SPEED         = 0.22;
+// ┌─────────────────────────────────────────────────────────┐
+// │  VITESSE DU ZOMBIE                                      │
+// │  BASE_SPEED     : avance par tick (100ms) au départ     │
+// │                   0.02 = très lent  0.05 = rapide       │
+// │                   0.08 = frénétique                     │
+// │  SPEED_PER_10OK : bonus vitesse tous les 10 corrects    │
+// │  MAX_SPEED      : vitesse plafond absolue               │
+// └─────────────────────────────────────────────────────────┘
+const BASE_SPEED        = 0.055;
+const SPEED_PER_10OK    = 0.020;
+const MAX_SPEED         = 0.30;
 
-const ERROR_JUMP      = 8;    // % forward on wrong answer
-const CORRECT_PUSH    = 0;    // pas de recul sur bonne réponse normale
-const BONUS_PUSH      = 14;   // % backward on bonus correct
+// ┌─────────────────────────────────────────────────────────┐
+// │  SAUTS DU ZOMBIE (en % de la largeur)                   │
+// │  ERROR_JUMP  : avance zombie sur mauvaise réponse       │
+// │  BONUS_PUSH  : recul zombie sur réponse bonus correcte  │
+// └─────────────────────────────────────────────────────────┘
+const ERROR_JUMP  = 10;
+const BONUS_PUSH  = 14;
 
-const BONUS_MIN = 6;
-const BONUS_MAX = 13;
+// ┌─────────────────────────────────────────────────────────┐
+// │  FRÉQUENCE DES BONUS                                    │
+// │  BONUS_MIN / MAX : nb de bonnes réponses entre 2 bonus  │
+// │  (ex: 5–10 = bonus toutes les 5 à 10 bonnes réponses)  │
+// └─────────────────────────────────────────────────────────┘
+const BONUS_MIN = 5;
+const BONUS_MAX = 10;
+
+// ┌─────────────────────────────────────────────────────────┐
+// │  SCORE                                                  │
+// │  Points de base par bonne réponse : 10                  │
+// │  + bonus rapidité (max ~32) + combo (8/tranche de 3)    │
+// │  + survie : 2 pts/seconde                               │
+// │  + bonus : +30 pts                                      │
+// └─────────────────────────────────────────────────────────┘
+
 const SPEED_PIPS = 10;
-
 const EMOJIS_WIN  = ['💎','⭐','🏆','✨','🍄','💰','🎯','🔥'];
 const EMOJIS_LOSE = ['💀','🧟','👻','🕷️','🐍'];
 
