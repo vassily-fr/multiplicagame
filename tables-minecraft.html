@@ -379,6 +379,22 @@ body::before {
 .lb-tab.active { background:#1A1400; border-color:var(--gold); color:var(--gold); }
 .lb-tab:hover:not(.active) { border-color:#444; color:#888; }
 
+.lb-tabs + .lb-tabs { margin-top:4px; }
+
+.scores-btn {
+  background:#1A1A0A; border:4px solid #444400; box-shadow:0 5px 0 #111100;
+  color:var(--gold); font-family:var(--pixelfont); font-size:10px;
+  padding:12px 20px; cursor:pointer; letter-spacing:2px;
+  transition:all .1s; text-shadow:2px 2px 0 #000; flex:1;
+}
+.scores-btn:hover { background:#2A2A10; border-color:#666600; }
+.scores-btn:active { transform:translateY(5px); box-shadow:none; }
+
+.scores-title {
+  font-size:clamp(14px,3.5vw,20px); color:var(--gold);
+  text-shadow:3px 3px 0 #7A5500; text-align:center; letter-spacing:2px;
+}
+
 .action-btns { display:flex; gap:10px; width:100%; }
 .retry-btn {
   background:#1A3A5A; border:4px solid #2A6AAA; box-shadow:0 5px 0 #0A1A2A;
@@ -483,7 +499,10 @@ body::before {
     </div>
 
     <div id="top3-display" class="top-scores-mini"></div>
-    <button class="play-btn" id="play-btn" onclick="startGame()" disabled>▶ JOUER</button>
+    <div class="action-btns">
+      <button class="scores-btn" onclick="showScoresScreen()">🏆 SCORES</button>
+      <button class="play-btn" id="play-btn" onclick="startGame()" disabled style="flex:2">▶ JOUER</button>
+    </div>
   </div>
 
   <!-- GAME -->
@@ -555,10 +574,16 @@ body::before {
       <button class="play-btn" id="save-btn" onclick="saveScore()" style="padding:10px">💾 ENREGISTRER</button>
     </div>
 
-    <div class="lb-tabs" id="lb-tabs">
-      <button class="lb-tab active" onclick="setLBFilter('all')">TOUT</button>
-      <button class="lb-tab" onclick="setLBFilter('qcm')">QCM</button>
-      <button class="lb-tab" onclick="setLBFilter('type')">FRAPPE</button>
+    <div class="lb-tabs">
+      <button class="lb-tab lb-mode-tab active" data-filter="all"  onclick="setLBFilterMode('all','leaderboard')">TOUT</button>
+      <button class="lb-tab lb-mode-tab"        data-filter="qcm"  onclick="setLBFilterMode('qcm','leaderboard')">QCM</button>
+      <button class="lb-tab lb-mode-tab"        data-filter="type" onclick="setLBFilterMode('type','leaderboard')">FRAPPE</button>
+    </div>
+    <div class="lb-tabs">
+      <button class="lb-tab lb-table-tab active"  data-filter="all"    onclick="setLBFilterTable('all','leaderboard')">TOUT</button>
+      <button class="lb-tab lb-table-tab"         data-filter="single" onclick="setLBFilterTable('single','leaderboard')">1 TABLE</button>
+      <button class="lb-tab lb-table-tab"         data-filter="multi"  onclick="setLBFilterTable('multi','leaderboard')">MULTI</button>
+      <button class="lb-tab lb-table-tab"         data-filter="toutes" onclick="setLBFilterTable('toutes','leaderboard')">TOUTES ×</button>
     </div>
     <div class="leaderboard" id="leaderboard"></div>
 
@@ -566,6 +591,26 @@ body::before {
       <button class="retry-btn" onclick="retryGame()">🔄 REJOUER</button>
       <button class="play-btn" onclick="goHome()">🏠 MENU</button>
     </div>
+  </div>
+
+  <!-- SCORES -->
+  <div id="screen-scores" class="screen">
+    <div class="scores-title">🏆 MEILLEURS SCORES</div>
+    <div class="lb-tabs">
+      <button class="lb-tab lb-mode-tab active" data-filter="all"  onclick="setLBFilterMode('all','leaderboard-scores')">TOUT</button>
+      <button class="lb-tab lb-mode-tab"        data-filter="qcm"  onclick="setLBFilterMode('qcm','leaderboard-scores')">QCM</button>
+      <button class="lb-tab lb-mode-tab"        data-filter="type" onclick="setLBFilterMode('type','leaderboard-scores')">FRAPPE</button>
+    </div>
+    <div class="lb-tabs">
+      <button class="lb-tab lb-table-tab active"  data-filter="all"    onclick="setLBFilterTable('all','leaderboard-scores')">TOUT</button>
+      <button class="lb-tab lb-table-tab"         data-filter="single" onclick="setLBFilterTable('single','leaderboard-scores')">1 TABLE</button>
+      <button class="lb-tab lb-table-tab"         data-filter="multi"  onclick="setLBFilterTable('multi','leaderboard-scores')">MULTI</button>
+      <button class="lb-tab lb-table-tab"         data-filter="toutes" onclick="setLBFilterTable('toutes','leaderboard-scores')">TOUTES ×</button>
+    </div>
+    <div class="leaderboard" id="leaderboard-scores">
+      <div style="font-family:var(--vt);font-size:17px;color:#333;text-align:center;padding:16px">chargement...</div>
+    </div>
+    <button class="retry-btn" onclick="showScreen('screen-title')" style="width:100%">← RETOUR AU MENU</button>
   </div>
 
 </div>
@@ -649,7 +694,8 @@ function rndBonus() { return BONUS_MIN + Math.floor(Math.random()*(BONUS_MAX-BON
 
 // ── JSONBIN ──────────────────────────────────────────────────
 let _lb = [];
-let _lbFilter = 'all';
+let _lbFilterMode  = 'all'; // 'all' | 'qcm' | 'type'
+let _lbFilterTable = 'all'; // 'all' | 'single' | 'multi' | 'toutes'
 async function fetchLB() {
   try {
     const r = await fetch(BIN_URL+'/latest',{headers:{'X-Master-Key':BIN_KEY}});
@@ -1120,7 +1166,7 @@ function endGame() {
     const sb=document.getElementById('save-btn');
     sb.disabled=false; sb.textContent='💾 ENREGISTRER';
     showScreen('screen-gameover');
-    fetchLB().then(()=>renderLBUI(null));
+    fetchLB().then(()=>renderLBUI(null,'leaderboard'));
   },700);
 }
 
@@ -1131,11 +1177,20 @@ function calcFinal() {
 function getRank(s){return s>=500?'S':s>=300?'A':s>=150?'B':s>=60?'C':'D';}
 
 // ── LEADERBOARD UI ───────────────────────────────────────────
-function renderLBUI(newEntry){
-  const el=document.getElementById('leaderboard');
+function getFilteredLB() {
   let data=_lb;
-  if(_lbFilter==='qcm')  data=_lb.filter(e=>e.mode==='qcm');
-  if(_lbFilter==='type') data=_lb.filter(e=>e.mode==='type');
+  if(_lbFilterMode==='qcm')  data=data.filter(e=>e.mode==='qcm');
+  if(_lbFilterMode==='type') data=data.filter(e=>e.mode==='type');
+  if(_lbFilterTable==='single') data=data.filter(e=>e.table&&!String(e.table).includes('+')&&String(e.table).toUpperCase()!=='ALL');
+  if(_lbFilterTable==='multi')  data=data.filter(e=>e.table&&String(e.table).includes('+'));
+  if(_lbFilterTable==='toutes') data=data.filter(e=>String(e.table).toUpperCase()==='ALL');
+  return data;
+}
+
+function renderLBUI(newEntry, targetId='leaderboard'){
+  const el=document.getElementById(targetId);
+  if(!el) return;
+  const data=getFilteredLB();
   el.innerHTML='<div class="lb-title">— MEILLEURS SURVIVANTS 🌍 —</div>';
   if(!data.length){
     el.innerHTML+='<div style="font-family:var(--vt);font-size:17px;color:#333;text-align:center;padding:8px">Pas encore de scores</div>';
@@ -1152,16 +1207,24 @@ function renderLBUI(newEntry){
   });
 }
 
-function setLBFilter(f){
-  _lbFilter=f;
-  document.querySelectorAll('.lb-tab').forEach(t=>{
-    t.classList.toggle('active',
-      (f==='all'&&t.textContent==='TOUT')||
-      (f==='qcm'&&t.textContent==='QCM')||
-      (f==='type'&&t.textContent==='FRAPPE')
-    );
-  });
-  renderLBUI(null);
+function setLBFilterMode(f, targetId='leaderboard'){
+  _lbFilterMode=f;
+  document.querySelectorAll('.lb-mode-tab').forEach(t=>t.classList.toggle('active',t.dataset.filter===f));
+  renderLBUI(null, targetId);
+}
+
+function setLBFilterTable(f, targetId='leaderboard'){
+  _lbFilterTable=f;
+  document.querySelectorAll('.lb-table-tab').forEach(t=>t.classList.toggle('active',t.dataset.filter===f));
+  renderLBUI(null, targetId);
+}
+
+async function showScoresScreen(){
+  showScreen('screen-scores');
+  const el=document.getElementById('leaderboard-scores');
+  el.innerHTML='<div style="font-family:var(--vt);font-size:17px;color:#333;text-align:center;padding:16px">chargement...</div>';
+  await fetchLB();
+  renderLBUI(null,'leaderboard-scores');
 }
 
 async function saveScore(){
@@ -1172,7 +1235,7 @@ async function saveScore(){
   const tableStr=G.tables.length===1?String(G.tables[0]):G.tables.length===10?'ALL':G.tables.join('+');
   const entry={name:name.toUpperCase().slice(0,3),score:G.score,table:tableStr,mode:G.mode};
   await addScore(entry.name,entry.score,entry.table,entry.mode);
-  renderLBUI(entry);
+  renderLBUI(entry,'leaderboard');
   document.getElementById('name-entry-zone').style.display='none';
   spawnParts(true,6);
 }
