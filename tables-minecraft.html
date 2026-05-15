@@ -408,6 +408,75 @@ body::before {
 @keyframes screenFlash { 0%,100%{background:transparent} 50%{background:rgba(255,0,0,.18)} }
 .flash-error { animation:screenFlash .35s; }
 
+/* ===== CATCH ARENA ===== */
+.catch-arena {
+  width:100%; position:relative; overflow:hidden;
+  background:linear-gradient(to bottom,#0D1A2E 0%,#1A2A3A 70%,#0A0A0A 100%);
+  border:4px solid #333; height:220px;
+}
+/* En mode ATTRAPE : cacher les éléments inutiles + agrandir l'arène */
+#screen-game.catch-mode .speed-bar-wrap,
+#screen-game.catch-mode .question-card,
+#screen-game.catch-mode .combo-line,
+#screen-game.catch-mode .pass-btn { display:none !important; }
+#screen-game.catch-mode .arena-wrap { height:90px; }
+#screen-game.catch-mode .catch-arena { height: clamp(200px, 38vh, 380px); }
+.catch-ground {
+  position:absolute; bottom:0; left:0; right:0; height:20px;
+  background:repeating-linear-gradient(90deg,var(--dirt) 0,var(--dirt) 16px,#6B4E2F 16px,#6B4E2F 17px);
+  border-top:4px solid var(--grass-top);
+}
+.catch-runner {
+  position:absolute; bottom:20px;
+  width:44px; height:52px;
+  display:flex; align-items:flex-end; justify-content:center;
+  transform:translateX(-50%);
+  transition:left .06s linear;
+  filter:drop-shadow(2px 2px 0 rgba(0,0,0,.8));
+  z-index:3;
+}
+.catch-runner svg { display:block; }
+.falling-block {
+  position:absolute;
+  width:46px; height:36px;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--pixelfont); font-size:14px; font-weight:700;
+  border:3px solid; border-radius:0;
+  transform:translateX(-50%);
+  transition:top .1s linear;
+  z-index:2;
+  text-shadow:2px 2px 0 rgba(0,0,0,.8);
+  box-shadow:0 3px 0 rgba(0,0,0,.5);
+}
+.falling-block.correct-block,
+.falling-block.wrong-block {
+  background:#1a1a2e; border-color:#5566AA; color:#cce;
+}
+.falling-block.bonus-block {
+  background:#001A10; border-color:var(--emerald); color:var(--emerald);
+  animation:bonusBlockGlow .5s ease-in-out infinite alternate;
+}
+@keyframes bonusBlockGlow {
+  from{box-shadow:0 3px 0 rgba(0,0,0,.5),0 0 4px rgba(0,232,107,.3);}
+  to  {box-shadow:0 3px 0 rgba(0,0,0,.5),0 0 16px rgba(0,232,107,.9);}
+}
+.catch-caught-correct {
+  animation:caughtPop .25s ease-out forwards;
+}
+.catch-caught-wrong {
+  animation:caughtWrong .25s ease-out forwards;
+}
+@keyframes caughtPop   {0%{transform:translateX(-50%) scale(1)}100%{transform:translateX(-50%) scale(1.6);opacity:0}}
+@keyframes caughtWrong {0%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) translateY(-6px)}100%{transform:translateX(-50%) scale(.6);opacity:0}}
+
+.catch-question-display {
+  background:#111; border:3px solid #333; padding:10px 18px;
+  text-align:center; width:100%;
+}
+.catch-question-display .question-text {
+  font-size:clamp(20px,5vw,34px);
+}
+
 /* ===== MOBILE RESPONSIVE ===== */
 @media (max-width: 480px) {
   #app { padding: 12px 10px 56px; }
@@ -479,6 +548,10 @@ body::before {
         <span class="btn-icon">⌨️</span>
         <span>MODE FRAPPE<span class="btn-desc">Tape la réponse toi-même</span></span>
       </button>
+      <button class="mode-btn" id="btn-catch" onclick="selectMode('catch')">
+        <span class="btn-icon">🧺</span>
+        <span>MODE ATTRAPE<span class="btn-desc">Cours attraper la bonne réponse</span></span>
+      </button>
     </div>
 
     <div class="menu-panel">
@@ -546,6 +619,16 @@ body::before {
       <input type="text" class="type-input" id="type-input" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="?" autocomplete="off">
       <div class="numpad" id="numpad"></div>
     </div>
+
+    <div id="catch-zone" style="display:none; flex-direction:column; gap:8px; width:100%;">
+      <div class="catch-arena" id="catch-arena">
+        <div class="catch-ground"></div>
+        <div class="catch-runner" id="catch-runner"></div>
+      </div>
+      <div class="catch-question-display">
+        <div class="question-text" id="catch-question-display"></div>
+      </div>
+    </div>
   </div>
 
   <!-- GAME OVER -->
@@ -575,9 +658,10 @@ body::before {
     </div>
 
     <div class="lb-tabs">
-      <button class="lb-tab lb-mode-tab active" data-filter="all"  onclick="setLBFilterMode('all','leaderboard')">TOUT</button>
-      <button class="lb-tab lb-mode-tab"        data-filter="qcm"  onclick="setLBFilterMode('qcm','leaderboard')">QCM</button>
-      <button class="lb-tab lb-mode-tab"        data-filter="type" onclick="setLBFilterMode('type','leaderboard')">FRAPPE</button>
+      <button class="lb-tab lb-mode-tab active" data-filter="all"   onclick="setLBFilterMode('all','leaderboard')">TOUT</button>
+      <button class="lb-tab lb-mode-tab"        data-filter="qcm"   onclick="setLBFilterMode('qcm','leaderboard')">QCM</button>
+      <button class="lb-tab lb-mode-tab"        data-filter="type"  onclick="setLBFilterMode('type','leaderboard')">FRAPPE</button>
+      <button class="lb-tab lb-mode-tab"        data-filter="catch" onclick="setLBFilterMode('catch','leaderboard')">ATTRAPE</button>
     </div>
     <div class="lb-tabs">
       <button class="lb-tab lb-table-tab active"  data-filter="all"    onclick="setLBFilterTable('all','leaderboard')">TOUT</button>
@@ -597,9 +681,10 @@ body::before {
   <div id="screen-scores" class="screen">
     <div class="scores-title">🏆 MEILLEURS SCORES</div>
     <div class="lb-tabs">
-      <button class="lb-tab lb-mode-tab active" data-filter="all"  onclick="setLBFilterMode('all','leaderboard-scores')">TOUT</button>
-      <button class="lb-tab lb-mode-tab"        data-filter="qcm"  onclick="setLBFilterMode('qcm','leaderboard-scores')">QCM</button>
-      <button class="lb-tab lb-mode-tab"        data-filter="type" onclick="setLBFilterMode('type','leaderboard-scores')">FRAPPE</button>
+      <button class="lb-tab lb-mode-tab active" data-filter="all"   onclick="setLBFilterMode('all','leaderboard-scores')">TOUT</button>
+      <button class="lb-tab lb-mode-tab"        data-filter="qcm"   onclick="setLBFilterMode('qcm','leaderboard-scores')">QCM</button>
+      <button class="lb-tab lb-mode-tab"        data-filter="type"  onclick="setLBFilterMode('type','leaderboard-scores')">FRAPPE</button>
+      <button class="lb-tab lb-mode-tab"        data-filter="catch" onclick="setLBFilterMode('catch','leaderboard-scores')">ATTRAPE</button>
     </div>
     <div class="lb-tabs">
       <button class="lb-tab lb-table-tab active"  data-filter="all"    onclick="setLBFilterTable('all','leaderboard-scores')">TOUT</button>
@@ -763,6 +848,7 @@ function selectMode(m) {
   G.mode=m;
   document.getElementById('btn-qcm').classList.toggle('active-mode',m==='qcm');
   document.getElementById('btn-type').classList.toggle('active-mode',m==='type');
+  document.getElementById('btn-catch').classList.toggle('active-mode',m==='catch');
   checkReady();
 }
 function selectOp(op) {
@@ -811,16 +897,22 @@ function startGame() {
   setZombieArt('normal');
   setSheepArt('calm');
   updateDistBar(); updatePips(); updateHUD();
-  showCountdown(()=>{ nextQuestion(); startTick(); startSurvive(); });
+  if(G.mode==='catch'){
+    showCountdown(()=>{ startCatch(); startTick(); startSurvive(); });
+  } else {
+    showCountdown(()=>{ nextQuestion(); startTick(); startSurvive(); });
+  }
 }
 
 function retryGame() { startGame(); }
 function goHome() {
   clearInterval(G.tickInterval); clearInterval(G.surviveInterval);
+  if(G.mode==='catch') stopCatch();
   G.mode=G.lastMode; G.op=G.lastOp; G.tables=G.lastTables?G.lastTables.slice():[];
   showScreen('screen-title');
   document.getElementById('btn-qcm').classList.toggle('active-mode',G.mode==='qcm');
   document.getElementById('btn-type').classList.toggle('active-mode',G.mode==='type');
+  document.getElementById('btn-catch').classList.toggle('active-mode',G.mode==='catch');
   document.getElementById('btn-mul').classList.toggle('active-mode',G.op!=='add');
   document.getElementById('btn-add').classList.toggle('active-mode',G.op==='add');
   document.getElementById('table-panel-title').textContent=G.op==='add'?'— QUEL NOMBRE ? —':'— QUELLE TABLE ? —';
@@ -938,6 +1030,7 @@ function nextQuestion() {
   const pb=document.getElementById('pass-btn');
   if(pb) pb.style.display=G.isBonus?'block':'none';
 
+  document.getElementById('catch-zone').style.display='none';
   if(G.mode==='qcm') showQCM();
   else showTypeZone();
 }
@@ -951,6 +1044,308 @@ function passBonus() {
   showFeedback('⏭ BONUS PASSÉ','wrong');
   setTimeout(()=>{G.locked=false;nextQuestion();},400);
 }
+
+function passBonus() {
+  if(!G.isBonus||G.locked||G.gameOver) return;
+  G.locked=true;
+  const pb=document.getElementById('pass-btn');
+  if(pb) pb.style.display='none';
+  G.correctSinceLastBonus=0; G.nextBonusAt=rndBonus();
+  showFeedback('⏭ BONUS PASSÉ','wrong');
+  setTimeout(()=>{G.locked=false;nextQuestion();},400);
+}
+
+// ── CATCH MODE ───────────────────────────────────────────────
+// Config catch (tweak here)
+const CATCH_RUNNER_SPEED  = 1.2;  // % per frame at 60fps
+const CATCH_FALL_BASE     = 0.55; // % arena-height per frame at start
+const CATCH_FALL_PER_10   = 0.12; // speed added every 10 correct
+const CATCH_FALL_MAX      = 2.2;
+const CATCH_SPAWN_BASE    = 1600; // ms between spawns
+const CATCH_SPAWN_MIN     = 600;
+const CATCH_MAX_BLOCKS    = 6;
+const CATCH_BONUS_EVERY   = 8;    // spawn ⭐ every N correct answers
+const CATCH_GUARANTEE     = 6;    // bonne réponse garantie dans les N prochains spawns
+
+let C = {}; // catch sub-state
+function resetCatch() {
+  C = {
+    runnerPct: 50,   // % horizontal position
+    blocks: [],      // {id, pct, topPct, value, type, el}
+    blockId: 0,
+    spawnTimer: null,
+    frameId: null,
+    keys: {left:false, right:false},
+    touchTargetPct: null,
+    arenaH: 220,
+    catchCorrect: 0,
+    spawnsSinceCorrect: 0,
+  };
+}
+
+function startCatch() {
+  resetCatch();
+  document.getElementById('screen-game').classList.add('catch-mode');
+  document.getElementById('qcm-zone').style.display='none';
+  document.getElementById('type-zone').style.display='none';
+  document.getElementById('pass-btn').style.display='none';
+  document.getElementById('catch-zone').style.display='flex';
+
+  // Set runner SVG
+  document.getElementById('catch-runner').innerHTML=RUNNER_SVG;
+  spawnCatchQuestion();
+
+  C.frameId=requestAnimationFrame(catchFrame);
+  scheduleCatchSpawn();
+  bindCatchControls();
+}
+
+function spawnCatchQuestion() {
+  const tableNum=G.tables[Math.floor(Math.random()*G.tables.length)];
+  const b=1+Math.floor(Math.random()*10);
+  const opSym=G.op==='add'?'+':'×';
+  const answer=G.op==='add'?tableNum+b:tableNum*b;
+  C.question={a:tableNum,b,answer,opSym};
+  G.questionStart=Date.now();
+  // La bonne réponse apparaîtra dans 1..CATCH_GUARANTEE spawns (aléatoire)
+  C.spawnsSinceCorrect=Math.floor(Math.random()*CATCH_GUARANTEE);
+  // Update display
+  const el=document.getElementById('catch-question-display');
+  el.className='question-text';
+  el.innerHTML=`<span>${tableNum}</span> <span class="op">${opSym}</span> <span>${b}</span> <span class="eq">=</span> <span class="blank">?</span>`;
+}
+
+function makeWrongAnswers(correct, count) {
+  const s=new Set([correct]);
+  if(G.op==='add'){
+    while(s.size<=count){const d=1+Math.floor(Math.random()*6);const f=correct+(Math.random()>.5?d:-d);if(f>0)s.add(f);}
+  } else {
+    const tbl=C.question.a;
+    while(s.size<=count){
+      const fake=tbl*(1+Math.floor(Math.random()*10));
+      if(fake!==correct) s.add(fake);
+      if(s.size<=count){const d=1+Math.floor(Math.random()*5);const f=correct+(Math.random()>.5?d:-d);if(f>0)s.add(f);}
+    }
+  }
+  return Array.from(s).filter(x=>x!==correct).slice(0,count);
+}
+
+
+
+function scheduleCatchSpawn() {
+  if(G.gameOver) return;
+  const delay=Math.max(CATCH_SPAWN_MIN, CATCH_SPAWN_BASE - G.totalCorrect*18);
+  C.spawnTimer=setTimeout(()=>{
+    spawnBlock();
+    scheduleCatchSpawn();
+  }, delay);
+}
+
+function _spawnOneBlock(value, type) {
+  const arena=document.getElementById('catch-arena');
+  if(!arena||G.gameOver) return;
+  const el=document.createElement('div');
+  el.className='falling-block '+(type==='bonus'?'bonus-block':'wrong-block');
+  el.textContent=value;
+  const pct=10+Math.random()*80;
+  el.style.left=pct+'%';
+  el.style.top='-40px';
+  arena.appendChild(el);
+  const fallSpeed=Math.min(CATCH_FALL_MAX,
+    (CATCH_FALL_BASE + Math.floor(G.totalCorrect/10)*CATCH_FALL_PER_10) * (0.7+Math.random()*0.7));
+  C.blocks.push({id:C.blockId++, pct, topPx:-40, value, type, el, speed:fallSpeed});
+}
+
+function spawnBlock() {
+  if(G.gameOver||!C.question) return;
+  if(C.blocks.length>=CATCH_MAX_BLOCKS) return; // arène pleine, on attend
+
+  C.spawnsSinceCorrect++;
+  const forceCorrect=C.spawnsSinceCorrect>=CATCH_GUARANTEE;
+  const wantBonus=!forceCorrect && C.catchCorrect>0 && C.catchCorrect%CATCH_BONUS_EVERY===0
+                  && !C.blocks.some(b=>b.type==='bonus');
+
+  let value, type;
+  if(forceCorrect){
+    value=C.question.answer; type='correct';
+    C.spawnsSinceCorrect=0;
+  } else if(wantBonus){
+    value='⭐'; type='bonus';
+  } else {
+    value=makeWrongAnswers(C.question.answer,1)[0]; type='wrong';
+  }
+  _spawnOneBlock(value, type);
+}
+
+let _lastFrameTime=0;
+function catchFrame(ts) {
+  if(G.gameOver) return;
+  const dt=ts-_lastFrameTime; _lastFrameTime=ts;
+  const arena=document.getElementById('catch-arena');
+  if(!arena){C.frameId=requestAnimationFrame(catchFrame);return;}
+  C.arenaH=arena.clientHeight||220;
+  const arenaW=arena.clientWidth||300;
+
+  // Move runner
+  if(C.touchTargetPct!==null){
+    const diff=C.touchTargetPct-C.runnerPct;
+    const step=Math.min(Math.abs(diff), CATCH_RUNNER_SPEED*(dt/16));
+    C.runnerPct+=Math.sign(diff)*step;
+  } else {
+    if(C.keys.left)  C.runnerPct=Math.max(4,  C.runnerPct-CATCH_RUNNER_SPEED*(dt/16));
+    if(C.keys.right) C.runnerPct=Math.min(96, C.runnerPct+CATCH_RUNNER_SPEED*(dt/16));
+  }
+  const runner=document.getElementById('catch-runner');
+  if(runner) runner.style.left=C.runnerPct+'%';
+
+  // Move + check blocks
+  const runnerPxLeft=(C.runnerPct/100)*arenaW;
+  const catchY=C.arenaH-20-52; // ground(20) + runner height(52)
+
+  C.blocks=C.blocks.filter(block=>{
+    block.topPx+=block.speed*(dt/16);
+    block.el.style.top=block.topPx+'px';
+
+    const blockPxLeft=(block.pct/100)*arenaW;
+    const caught=Math.abs(blockPxLeft-runnerPxLeft)<38 && block.topPx>=catchY-18 && block.topPx<=catchY+22;
+
+    if(caught){
+      catchBlock(block);
+      return false; // remove
+    }
+    if(block.topPx>C.arenaH+10){
+      if(block.el.parentNode) block.el.parentNode.removeChild(block.el);
+      return false; // le compteur de garantie s'occupe de re-spawner la bonne réponse
+    }
+    return true;
+  });
+
+  C.frameId=requestAnimationFrame(catchFrame);
+}
+
+function catchBlock(block) {
+  if(G.gameOver) return;
+  const isCorrect=(block.type!=='bonus') && (block.value===C.question.answer);
+  const isBonus=(block.type==='bonus');
+  block.el.classList.add(isCorrect||isBonus?'catch-caught-correct':'catch-caught-wrong');
+  setTimeout(()=>{if(block.el.parentNode) block.el.parentNode.removeChild(block.el);},300);
+
+  if(isCorrect){
+    C.catchCorrect++;
+    G.correct++; G.totalCorrect++; G.combo++;
+    if(G.totalCorrect%10===0) flashSpeedUp();
+    if(G.combo>G.bestCombo) G.bestCombo=G.combo;
+    const elapsed=(Date.now()-G.questionStart)/1000;
+    const tb=Math.max(0,Math.round((4-elapsed)*8));
+    const cb=Math.floor(G.combo/3)*8;
+    const pts=10+tb+cb;
+    G.score+=pts;
+    showFeedback(G.combo>=3?'+'+pts+' 🔥×'+G.combo:'+'+pts,'correct');
+    if(G.combo>=3) spawnParts(true,4);
+    document.getElementById('combo-line').textContent=G.combo>=3?'🔥 COMBO ×'+G.combo+' !':'';
+    updateHUD();
+    // Keep existing wrong blocks — just load next question
+    setTimeout(()=>{
+      if(!G.gameOver){
+        if(C.spawnTimer){ clearTimeout(C.spawnTimer); C.spawnTimer=null; }
+        spawnCatchQuestion();
+        scheduleCatchSpawn();
+      }
+    }, 350);
+  } else if(isBonus){
+    G.bonusSaved++; G.combo++;
+    G.zombiePos-=BONUS_PUSH;
+    G.score+=40;
+    showFeedback('⭐ +40 ZOMBIE RECULE !','bonus');
+    spawnParts(true,8); anim('char-zombie','zombie-retreat'); sheepHappy();
+    updateHUD(); moveZombie();
+  } else {
+    // wrong
+    G.errors++; G.combo=0;
+    G.zombiePos+=ERROR_JUMP;
+    document.getElementById('combo-line').textContent='';
+    showFeedback('✗ '+C.question.answer,'wrong');
+    spawnParts(false,3); anim('char-zombie','zombie-lunge'); sheepScared(); flashScreen();
+    updateHUD(); moveZombie();
+  }
+}
+
+function clearCatchBlocks(){
+  C.blocks.forEach(b=>{if(b.el&&b.el.parentNode)b.el.parentNode.removeChild(b.el);});
+  C.blocks=[];
+  if(C.spawnTimer){clearTimeout(C.spawnTimer);C.spawnTimer=null;}
+}
+
+function stopCatch(){
+  document.getElementById('screen-game').classList.remove('catch-mode');
+  if(C.frameId) cancelAnimationFrame(C.frameId);
+  if(C.spawnTimer) clearTimeout(C.spawnTimer);
+  clearCatchBlocks();
+  unbindCatchControls();
+}
+
+// ── CATCH CONTROLS ────────────────────────────────────────────
+function _onKeyDown(e){ if(e.key==='ArrowLeft'||e.key==='a')  C.keys.left=true;  if(e.key==='ArrowRight'||e.key==='d') C.keys.right=true; }
+function _onKeyUp(e)  { if(e.key==='ArrowLeft'||e.key==='a')  C.keys.left=false; if(e.key==='ArrowRight'||e.key==='d') C.keys.right=false; }
+function _onTouchMove(e){
+  const arena=document.getElementById('catch-arena');
+  if(!arena) return;
+  const rect=arena.getBoundingClientRect();
+  const tx=e.touches[0].clientX-rect.left;
+  C.touchTargetPct=Math.max(4,Math.min(96,(tx/rect.width)*100));
+  e.preventDefault();
+}
+function _onTouchEnd(){ C.touchTargetPct=null; }
+
+function bindCatchControls(){
+  document.addEventListener('keydown',_onKeyDown);
+  document.addEventListener('keyup',_onKeyUp);
+  const arena=document.getElementById('catch-arena');
+  if(arena){
+    arena.addEventListener('touchmove',_onTouchMove,{passive:false});
+    arena.addEventListener('touchend',_onTouchEnd);
+  }
+}
+function unbindCatchControls(){
+  document.removeEventListener('keydown',_onKeyDown);
+  document.removeEventListener('keyup',_onKeyUp);
+  const arena=document.getElementById('catch-arena');
+  if(arena){
+    arena.removeEventListener('touchmove',_onTouchMove);
+    arena.removeEventListener('touchend',_onTouchEnd);
+  }
+}
+
+// Runner pixel-art SVG (kid with basket)
+const RUNNER_SVG=`<svg width="44" height="52" viewBox="0 0 22 26" xmlns="http://www.w3.org/2000/svg">
+  <!-- head -->
+  <rect x="8" y="1" width="6" height="6" rx="1" fill="#F4C87A"/>
+  <!-- hair -->
+  <rect x="8" y="1" width="6" height="2" fill="#6B3A10"/>
+  <rect x="8" y="3" width="1" height="1" fill="#6B3A10"/>
+  <rect x="13" y="3" width="1" height="1" fill="#6B3A10"/>
+  <!-- eyes -->
+  <rect x="9" y="4" width="1" height="1" fill="#222"/>
+  <rect x="12" y="4" width="1" height="1" fill="#222"/>
+  <!-- smile -->
+  <rect x="10" y="6" width="2" height="1" fill="#C07050"/>
+  <!-- body -->
+  <rect x="8" y="7" width="6" height="6" fill="#4A8AE8"/>
+  <!-- arms -->
+  <rect x="5" y="8" width="3" height="2" fill="#F4C87A"/>
+  <rect x="14" y="8" width="3" height="2" fill="#F4C87A"/>
+  <!-- basket (held low) -->
+  <rect x="4" y="10" width="6" height="4" fill="#8B6914" rx="0"/>
+  <rect x="4" y="10" width="6" height="1" fill="#AA8820"/>
+  <rect x="5" y="11" width="1" height="3" fill="#AA8820"/>
+  <rect x="7" y="11" width="1" height="3" fill="#AA8820"/>
+  <!-- legs running -->
+  <rect x="8"  y="13" width="3" height="5" fill="#2A3A8A"/>
+  <rect x="11" y="13" width="3" height="5" fill="#2A3A8A"/>
+  <!-- shoes -->
+  <rect x="7"  y="17" width="4" height="2" fill="#333"/>
+  <rect x="11" y="17" width="4" height="2" fill="#333"/>
+</svg>`;
 
 // ── QCM ──────────────────────────────────────────────────────
 function showQCM() {
@@ -1145,6 +1540,7 @@ function endGame() {
   if(G.gameOver) return;
   G.gameOver=true;
   clearInterval(G.tickInterval); clearInterval(G.surviveInterval);
+  if(G.mode==='catch') stopCatch();
   setSheepArt('dead');
   setZombieArt('eating');
   spawnParts(false,6);
@@ -1179,8 +1575,9 @@ function getRank(s){return s>=500?'S':s>=300?'A':s>=150?'B':s>=60?'C':'D';}
 // ── LEADERBOARD UI ───────────────────────────────────────────
 function getFilteredLB() {
   let data=_lb;
-  if(_lbFilterMode==='qcm')  data=data.filter(e=>e.mode==='qcm');
-  if(_lbFilterMode==='type') data=data.filter(e=>e.mode==='type');
+  if(_lbFilterMode==='qcm')   data=data.filter(e=>e.mode==='qcm');
+  if(_lbFilterMode==='type')  data=data.filter(e=>e.mode==='type');
+  if(_lbFilterMode==='catch') data=data.filter(e=>e.mode==='catch');
   if(_lbFilterTable==='single') data=data.filter(e=>e.table&&!String(e.table).includes('+')&&String(e.table).toUpperCase()!=='ALL');
   if(_lbFilterTable==='multi')  data=data.filter(e=>e.table&&String(e.table).includes('+'));
   if(_lbFilterTable==='toutes') data=data.filter(e=>String(e.table).toUpperCase()==='ALL');
