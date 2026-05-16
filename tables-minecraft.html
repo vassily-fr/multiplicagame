@@ -782,6 +782,34 @@ const SPEED_PIPS = 10;
 const EMOJIS_WIN  = ['💎','⭐','🏆','✨','🍄','💰','🎯','🔥'];
 const EMOJIS_LOSE = ['💀','🧟','👻','🕷️','🐍'];
 
+// ── SOUND ────────────────────────────────────────────────────
+let _ctx = null;
+function _ac() {
+  if (!_ctx) _ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (_ctx.state === 'suspended') _ctx.resume();
+  return _ctx;
+}
+function _tone(freq, dur, type='square', vol=0.12, t0=0) {
+  try {
+    const ctx = _ac(), now = ctx.currentTime;
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, now + t0);
+    gain.gain.setValueAtTime(vol, now + t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + t0 + dur);
+    osc.start(now + t0); osc.stop(now + t0 + dur + 0.02);
+  } catch(e) {}
+}
+function sfxCorrect()  { _tone(523,.07,'square',.12); _tone(659,.07,'square',.12,.07); _tone(784,.13,'square',.11,.14); }
+function sfxCombo()    { _tone(784,.06,'square',.13); _tone(988,.06,'square',.13,.06); _tone(1175,.14,'square',.13,.12); }
+function sfxBonus()    { [523,659,784,1047,1319].forEach((f,i)=>_tone(f,.09,'square',.10,i*.065)); }
+function sfxWrong()    { _tone(200,.07,'sawtooth',.15); _tone(140,.14,'sawtooth',.13,.07); }
+function sfxSpeedUp()  { [330,415,523,659,830].forEach((f,i)=>_tone(f,.07,'square',.09,i*.055)); }
+function sfxGameOver() { [440,370,294,220,165].forEach((f,i)=>_tone(f,.2,'sawtooth',.11,i*.18)); }
+function sfxCountdownBeep() { _tone(440,.08,'square',.13); }
+function sfxCountdownGo()   { _tone(659,.07,'square',.15); _tone(784,.07,'square',.15,.07); _tone(1047,.2,'square',.14,.14); }
+
 // ── STATE ────────────────────────────────────────────────────
 let G = {};
 function resetState() {
@@ -954,13 +982,15 @@ function goHome() {
 
 function showCountdown(cb) {
   let n=3;
+  sfxCountdownBeep();
   const ov=document.createElement('div');
   ov.className='countdown-overlay';
   ov.innerHTML=`<div class="countdown-num">${n}</div><div class="countdown-label">PRÊT ?</div>`;
   document.body.appendChild(ov);
   const t=setInterval(()=>{
     n--;
-    if(n<=0){clearInterval(t);ov.remove();cb();return;}
+    if(n<=0){clearInterval(t);ov.remove();sfxCountdownGo();cb();return;}
+    sfxCountdownBeep();
     const el=ov.querySelector('.countdown-num');
     el.textContent=n; el.style.animation='none'; void el.offsetWidth; el.style.animation='cntPop .7s ease-out';
   },800);
@@ -1269,6 +1299,7 @@ function catchBlock(block) {
     const cb=Math.floor(G.combo/3)*8;
     const pts=10+tb+cb;
     G.score+=pts;
+    if(G.combo>=3) sfxCombo(); else sfxCorrect();
     showFeedback(G.combo>=3?'+'+pts+' 🔥×'+G.combo:'+'+pts,'correct');
     if(G.combo>=3) spawnParts(true,4);
     document.getElementById('combo-line').textContent=G.combo>=3?'🔥 COMBO ×'+G.combo+' !':'';
@@ -1285,6 +1316,7 @@ function catchBlock(block) {
     G.bonusSaved++; G.combo++;
     G.zombiePos-=BONUS_PUSH;
     G.score+=40;
+    sfxBonus();
     showFeedback('⭐ +40 ZOMBIE RECULE !','bonus');
     spawnParts(true,8); anim('char-zombie','zombie-retreat'); sheepHappy();
     updateHUD(); moveZombie();
@@ -1293,6 +1325,7 @@ function catchBlock(block) {
     G.errors++; G.combo=0;
     G.zombiePos+=ERROR_JUMP;
     document.getElementById('combo-line').textContent='';
+    sfxWrong();
     showFeedback('✗ '+C.question.answer,'wrong');
     spawnParts(false,3); anim('char-zombie','zombie-lunge'); sheepScared(); flashScreen();
     updateHUD(); moveZombie();
@@ -1529,11 +1562,13 @@ function handleResult(ok) {
     if(G.isBonus){
       G.bonusSaved++; G.correctSinceLastBonus=0; G.nextBonusAt=rndBonus();
       pts+=30; G.zombiePos-=BONUS_PUSH;
+      sfxBonus();
       showFeedback('🛡️ +'+pts+' ZOMBIE RECULE !','bonus');
       spawnParts(true,8); anim('char-zombie','zombie-retreat'); sheepHappy();
     } else {
       G.correctSinceLastBonus++;
       // pas de recul — le zombie continue d'avancer
+      if(G.combo>=3) sfxCombo(); else sfxCorrect();
       showFeedback(G.combo>=3?'+'+pts+' 🔥×'+G.combo:'+'+pts,'correct');
       if(G.combo>=3) spawnParts(true,4);
     }
@@ -1542,6 +1577,7 @@ function handleResult(ok) {
     document.getElementById('combo-line').textContent=G.combo>=3?'🔥 COMBO ×'+G.combo+' !':'';
   } else {
     document.getElementById('combo-line').textContent='';
+    sfxWrong();
     showFeedback('✗ '+G.question.answer,'wrong');
     if(G.isBonus){
       // pas de pénalité sur erreur bonus — le zombie continue sa course normale
@@ -1612,6 +1648,7 @@ function spawnParts(good,count){
 function endGame() {
   if(G.gameOver) return;
   G.gameOver=true;
+  sfxGameOver();
   clearInterval(G.tickInterval); clearInterval(G.surviveInterval);
   if(G.mode==='catch') stopCatch();
   setSheepArt('dead');
@@ -1736,6 +1773,7 @@ function setSheepArt(state){
 }
 
 function flashSpeedUp(){
+  sfxSpeedUp();
   // Flash all pips briefly white to signal speed increase
   for(let i=0;i<SPEED_PIPS;i++){
     const p=document.getElementById('pip'+i);
