@@ -1,6 +1,211 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-  <meta http-equiv="refresh" content="0; url=tables-minecraft.html">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZOMBIE MATH ARCADE</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=VT323:wght@400&display=swap');
+
+:root {
+  --gold: #FFD700;
+  --diamond: #5CE6F7;
+  --redstone: #FF3300;
+  --emerald: #00E86B;
+  --night: #0A0E1A;
+  --grass-top: #5D9B3F;
+  --dirt: #7A5C3A;
+  --pixelfont: 'Silkscreen', monospace;
+  --vt: 'VT323', monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; image-rendering: pixelated; }
+button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; cursor: pointer; }
+
+body {
+  background: var(--night);
+  font-family: var(--pixelfont);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 7%  11%, white 0%, transparent 100%),
+    radial-gradient(1px 1px at 23% 37%, rgba(255,255,255,.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 51%  7%, white 0%, transparent 100%),
+    radial-gradient(1px 1px at 67% 54%, rgba(255,255,255,.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 82% 21%, white 0%, transparent 100%),
+    radial-gradient(1px 1px at 17% 71%, rgba(255,255,255,.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 41% 81%, white 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 77%, rgba(255,255,255,.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 59% 31%, rgba(255,255,255,.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 35% 55%, rgba(255,255,255,.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 76% 44%, rgba(255,255,255,.4) 0%, transparent 100%);
+  pointer-events: none; z-index: 0;
+}
+
+.ground {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: 44px; z-index: 1;
+  background: repeating-linear-gradient(90deg, var(--dirt) 0, var(--dirt) 16px, #6B4E2F 16px, #6B4E2F 17px);
+  border-top: 8px solid var(--grass-top);
+}
+
+main {
+  position: relative; z-index: 2;
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 36px 16px 76px;
+  gap: 32px;
+}
+
+/* ── TITLE ─────────────────────────────────────────────── */
+.arcade-title { text-align: center; }
+.arcade-title .line1 {
+  display: block;
+  font-size: clamp(18px, 5vw, 36px);
+  color: var(--gold);
+  text-shadow: 4px 4px 0 #7A5500;
+  animation: bob 1.6s ease-in-out infinite alternate;
+  letter-spacing: 2px;
+}
+.arcade-title .line2 {
+  display: block;
+  font-size: clamp(7px, 1.8vw, 11px);
+  color: var(--diamond);
+  letter-spacing: 3px;
+  margin-top: 8px;
+  text-shadow: 2px 2px 0 #004455;
+}
+@keyframes bob { from { transform: translateY(0); } to { transform: translateY(-6px); } }
+
+/* ── CARDS GRID ──────────────────────────────────────────── */
+.cards {
+  display: flex; flex-wrap: wrap; gap: 16px;
+  justify-content: center; width: 100%; max-width: 740px;
+}
+
+.game-card {
+  flex: 1 1 290px; max-width: 350px;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  padding: 24px 20px;
+  background: #141414;
+  border: 4px solid #555;
+  box-shadow: inset -4px -4px 0 rgba(0,0,0,.5), inset 4px 4px 0 rgba(255,255,255,.06), 0 8px 0 #000;
+  text-decoration: none; color: inherit;
+  transition: transform .1s;
+}
+.game-card:hover { transform: translateY(-2px); }
+
+/* Times Craft accent */
+.card-tc { border-color: #3E7A25; box-shadow: inset -4px -4px 0 rgba(0,0,0,.5), inset 4px 4px 0 rgba(255,255,255,.08), 0 8px 0 #1A3310; }
+/* Dead Ducks accent */
+.card-dd { border-color: #7A2020; box-shadow: inset -4px -4px 0 rgba(0,0,0,.5), inset 4px 4px 0 rgba(255,255,255,.08), 0 8px 0 #3D0000; }
+
+.card-icon {
+  font-size: 56px; line-height: 1;
+  filter: drop-shadow(3px 3px 0 rgba(0,0,0,.8));
+  animation: bob 2s ease-in-out infinite alternate;
+}
+.card-dd .card-icon { animation-delay: .7s; }
+
+.card-title {
+  font-size: clamp(13px, 3.2vw, 20px);
+  letter-spacing: 2px; text-align: center;
+  text-shadow: 3px 3px 0 rgba(0,0,0,.8);
+}
+.card-tc .card-title { color: var(--emerald); text-shadow: 2px 2px 0 #003322; }
+.card-dd .card-title { color: var(--redstone); text-shadow: 2px 2px 0 #440000; }
+
+.card-subtitle {
+  font-size: clamp(6px, 1.5vw, 9px);
+  color: #666; letter-spacing: 2px; text-align: center;
+}
+
+.card-modes {
+  display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
+}
+.card-mode-badge {
+  background: #0D0D0D; border: 2px solid #2A2A2A;
+  font-size: 7px; padding: 4px 8px; letter-spacing: 1px;
+}
+.card-tc .card-mode-badge { border-color: #2D5A1B; color: var(--emerald); }
+.card-dd .card-mode-badge { border-color: #5A1B1B; color: #FF6644; }
+
+.card-play-btn {
+  width: 100%; padding: 14px 20px;
+  font-family: var(--pixelfont); font-size: 11px; letter-spacing: 2px;
+  border: 4px solid; text-shadow: 2px 2px 0 #000;
+  transition: all .1s;
+}
+.card-tc .card-play-btn {
+  background: #2D5A1B; border-color: #4A8A2A;
+  box-shadow: 0 5px 0 #1A3310; color: var(--gold);
+}
+.card-tc .card-play-btn:hover  { background: #3A7025; }
+.card-tc .card-play-btn:active { transform: translateY(5px); box-shadow: none; }
+
+.card-dd .card-play-btn {
+  background: #5A1A1A; border-color: #8A2A2A;
+  box-shadow: 0 5px 0 #2D0000; color: var(--gold);
+}
+.card-dd .card-play-btn:hover  { background: #7A2020; }
+.card-dd .card-play-btn:active { transform: translateY(5px); box-shadow: none; }
+
+/* ── FOOTER ─────────────────────────────────────────────── */
+.arcade-footer {
+  font-family: var(--vt);
+  font-size: 17px;
+  color: #2A2A2A;
+  text-align: center;
+  letter-spacing: 2px;
+}
+</style>
 </head>
+<body>
+<div class="ground"></div>
+<main>
+
+  <div class="arcade-title">
+    <span class="line1">🧟 ZOMBIE MATH ARCADE 🧟</span>
+    <span class="line2">CHOISIS TON JEU</span>
+  </div>
+
+  <div class="cards">
+
+    <!-- TIMES CRAFT -->
+    <div class="game-card card-tc">
+      <div class="card-icon">⛏</div>
+      <div class="card-title">TIMES CRAFT</div>
+      <div class="card-subtitle">SAUVE LE MOUTON !</div>
+      <div class="card-modes">
+        <span class="card-mode-badge">🎯 QCM</span>
+        <span class="card-mode-badge">⌨️ FRAPPE</span>
+        <span class="card-mode-badge">🧺 ATTRAPE</span>
+      </div>
+      <button class="card-play-btn" onclick="location.href='tables-minecraft.html'">▶ JOUER</button>
+    </div>
+
+    <!-- DEAD DUCKS -->
+    <div class="game-card card-dd">
+      <div class="card-icon">🦆</div>
+      <div class="card-title">DEAD DUCKS</div>
+      <div class="card-subtitle">TIRE SUR LE BON RÉSULTAT !</div>
+      <div class="card-modes">
+        <span class="card-mode-badge">🔫 VISE &amp; TIRE</span>
+        <span class="card-mode-badge">🌊 VAGUES</span>
+        <span class="card-mode-badge">🏆 SCORE</span>
+      </div>
+      <button class="card-play-btn" onclick="location.href='dead-ducks.html'">▶ JOUER</button>
+    </div>
+
+  </div>
+
+  <div class="arcade-footer">ZOMBIE MATH ARCADE — 4 JEUX</div>
+
+</main>
+</body>
 </html>

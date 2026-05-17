@@ -1,0 +1,1576 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DEAD DUCKS — Zombie Math Arcade</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=VT323:wght@400&display=swap');
+
+:root {
+  --gold: #FFD700;
+  --diamond: #5CE6F7;
+  --redstone: #FF3300;
+  --emerald: #00E86B;
+  --night: #0A0E1A;
+  --grass-top: #3A6A1A;
+  --dirt: #5A3A1A;
+  --pixelfont: 'Silkscreen', monospace;
+  --vt: 'VT323', monospace;
+  --zombie: #4D8A22;
+  --blood: #880000;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; image-rendering: pixelated; }
+button, input { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+
+body {
+  background: var(--night);
+  font-family: var(--pixelfont);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 8% 12%, white 0%, transparent 100%),
+    radial-gradient(1px 1px at 25% 38%, rgba(255,255,255,.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 52% 8%, white 0%, transparent 100%),
+    radial-gradient(1px 1px at 68% 55%, rgba(255,255,255,.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 83% 22%, white 0%, transparent 100%),
+    radial-gradient(1px 1px at 18% 72%, rgba(255,255,255,.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 42% 82%, white 0%, transparent 100%),
+    radial-gradient(1px 1px at 91% 78%, rgba(255,255,255,.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 60% 32%, rgba(255,255,255,.6) 0%, transparent 100%);
+  pointer-events: none; z-index: 0;
+}
+
+.ground {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: 44px; z-index: 1;
+  background: repeating-linear-gradient(90deg, var(--dirt) 0, var(--dirt) 16px, #4A2E0A 16px, #4A2E0A 17px);
+  border-top: 8px solid var(--grass-top);
+}
+
+#app {
+  position: relative; z-index: 2;
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 20px 16px 56px;
+}
+
+.screen { display: none; width: 100%; max-width: 640px; }
+.screen.active { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+
+/* ── TITLE SCREEN ─────────────────────────────────────────── */
+.title-logo { text-align: center; margin-bottom: 4px; }
+.title-logo .line1 {
+  display: block;
+  font-size: clamp(20px, 5vw, 34px);
+  color: var(--redstone);
+  text-shadow: 4px 4px 0 #660000;
+  animation: bob 1.6s ease-in-out infinite alternate;
+  letter-spacing: 2px;
+}
+.title-logo .line2 {
+  display: block;
+  font-size: clamp(7px, 1.8vw, 11px);
+  color: #DD6644;
+  letter-spacing: 3px;
+  margin-top: 4px;
+  text-shadow: 2px 2px 0 #330000;
+}
+@keyframes bob { from { transform: translateY(0); } to { transform: translateY(-5px); } }
+
+.menu-panel {
+  background: #1A1A1A;
+  border: 4px solid #555;
+  box-shadow: inset -4px -4px 0 rgba(0,0,0,.5), inset 4px 4px 0 rgba(255,255,255,.06), 0 6px 0 #000;
+  padding: 18px 22px;
+  width: 100%;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.panel-title {
+  font-size: 9px; color: #666; text-align: center; letter-spacing: 2px; margin-bottom: 2px;
+}
+
+.mode-btn {
+  display: flex; align-items: center; gap: 14px;
+  background: #2D5A1B; border: 4px solid #3E7A25;
+  box-shadow: 0 4px 0 #1A3310, inset 2px 2px 0 rgba(255,255,255,.08);
+  color: white; font-family: var(--pixelfont); font-size: 9px;
+  padding: 12px 14px; cursor: pointer; text-align: left; line-height: 1.6; width: 100%;
+  transition: all .1s;
+}
+.mode-btn:hover { background: #3A7025; }
+.mode-btn:active { transform: translateY(4px); box-shadow: none; }
+.mode-btn.active-mode { background: #3A7025; border-color: #7AE040; }
+.mode-btn .btn-icon { font-size: 26px; flex-shrink: 0; }
+.mode-btn .btn-desc { font-size: 7px; color: #aaa; margin-top: 3px; display: block; }
+
+.table-grid {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%;
+}
+.table-btn {
+  background: #383838; border: 3px solid #555; box-shadow: 0 3px 0 #111;
+  color: #ccc; font-family: var(--pixelfont); font-size: 9px;
+  padding: 9px 4px; min-height: 44px; cursor: pointer; text-align: center;
+  display: flex; align-items: center; justify-content: center; transition: all .1s;
+}
+.table-btn:hover, .table-btn.selected {
+  background: var(--gold); color: #222; border-color: #AA9000; box-shadow: 0 3px 0 #665500;
+}
+.table-btn:active { transform: translateY(3px); box-shadow: none; }
+.table-btn-master {
+  grid-column: 1 / -1;
+  background: #0D1A2E; border: 3px solid var(--diamond);
+  color: var(--diamond); letter-spacing: 1px; box-shadow: 0 3px 0 #001A2E;
+}
+.table-btn-master:hover, .table-btn-master.selected {
+  background: var(--diamond); color: #001A22;
+  border-color: #40C0E0; box-shadow: 0 3px 0 #003344;
+}
+
+.play-btn {
+  background: #7A2020; border: 4px solid #AA3333; box-shadow: 0 5px 0 #3D0000;
+  color: var(--gold); font-family: var(--pixelfont); font-size: 12px;
+  padding: 14px 32px; cursor: pointer; letter-spacing: 2px;
+  transition: all .1s; width: 100%; text-shadow: 2px 2px 0 #000;
+}
+.play-btn:hover { background: #993333; }
+.play-btn:active { transform: translateY(5px); box-shadow: none; }
+.play-btn:disabled { opacity: .4; cursor: default; transform: none; box-shadow: 0 5px 0 #3D0000; }
+
+.top-scores-mini {
+  font-family: var(--vt); font-size: 17px; color: #777; text-align: center; width: 100%;
+}
+.top-scores-mini span { color: var(--gold); }
+
+/* ── HUD (game screen) ───────────────────────────────────── */
+.duck-hud {
+  width: 100%; display: flex; flex-direction: column; gap: 4px;
+}
+.duck-hud-top {
+  display: flex; justify-content: space-between; align-items: center;
+  background: rgba(0,0,0,.8); border: 3px solid #333; padding: 6px 12px;
+}
+.hud-wave  { font-size: 10px; color: #FF6644; letter-spacing: 1px; }
+.hud-score { font-size: 10px; color: var(--emerald); letter-spacing: 1px; }
+.hud-lives { display: flex; gap: 4px; align-items: center; }
+.heart {
+  width: 14px; height: 14px;
+  background: var(--redstone);
+  clip-path: polygon(50% 90%,10% 40%,0% 25%,15% 10%,35% 10%,50% 25%,65% 10%,85% 10%,100% 25%,90% 40%);
+  transition: background .2s;
+}
+.heart.lost { background: #2A1A1A; }
+
+.duck-hud-question {
+  background: rgba(0,0,0,.85); border: 3px solid #444;
+  padding: 10px 16px; text-align: center;
+}
+.question-txt {
+  font-family: var(--vt); font-size: clamp(28px, 6vw, 44px);
+  color: white; letter-spacing: 4px;
+}
+.question-txt .op  { color: var(--diamond); }
+.question-txt .eq  { color: #555; }
+.question-txt .qm  { color: var(--gold); text-decoration: underline; text-underline-offset: 4px; }
+
+/* ── ARENA ────────────────────────────────────────────────── */
+.game-arena {
+  width: 100%; position: relative; overflow: hidden;
+  height: clamp(260px, 42vh, 380px);
+  border: 4px solid #222; flex-shrink: 0;
+}
+
+/* Sky gradient */
+.arena-sky {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, #060E04 0%, #0A1A07 55%, #101F0A 100%);
+}
+
+/* Fog layer */
+.arena-fog {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 80%, rgba(20,40,10,.6) 0%, transparent 70%);
+}
+
+/* Moon */
+.arena-moon {
+  position: absolute; top: 10px; right: 14px;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: #C0C080; box-shadow: 0 0 10px rgba(200,200,100,.3);
+}
+
+/* Dead trees */
+.dead-tree {
+  position: absolute; bottom: 28px; pointer-events: none;
+}
+.dead-tree svg { display: block; }
+
+/* Graves */
+.grave {
+  position: absolute; bottom: 28px; pointer-events: none;
+}
+
+/* Arena ground */
+.arena-ground {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 28px;
+  background: repeating-linear-gradient(90deg, var(--dirt) 0, var(--dirt) 16px, #4A2E0A 16px, #4A2E0A 17px);
+  border-top: 5px solid var(--grass-top);
+}
+
+/* ── HUNTER ─────────────────────────────────────────────── */
+#hunter {
+  position: absolute;
+  bottom: 28px;
+  width: 40px; height: 56px;
+  transform: translateX(-50%);
+  z-index: 10;
+  filter: drop-shadow(2px 2px 0 rgba(0,0,0,.9));
+}
+#hunter svg { display: block; }
+
+/* ── BULLETS ────────────────────────────────────────────── */
+.bullet {
+  position: absolute;
+  width: 5px; height: 16px;
+  background: linear-gradient(to top, #FF6600, #FFEE00);
+  border-radius: 2px;
+  box-shadow: 0 0 6px #FF8800, 0 0 2px #FFFF00;
+  pointer-events: none;
+  z-index: 9;
+}
+
+/* ── DUCKS ──────────────────────────────────────────────── */
+.duck {
+  position: absolute;
+  width: 72px; height: 48px;
+  z-index: 8;
+  pointer-events: none;
+}
+.duck-sprite {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: flex-start;
+}
+.duck-sprite svg { display: block; }
+.duck.rtl .duck-sprite { transform: scaleX(-1); }
+
+.duck-label {
+  position: absolute;
+  top: 62%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--vt); font-size: 22px;
+  color: white;
+  text-shadow: 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000, 0 0 8px rgba(255,255,100,.4);
+  pointer-events: none; white-space: nowrap;
+  z-index: 2;
+}
+.duck.big-num .duck-label { font-size: 18px; }
+
+@keyframes duckBob {
+  0%, 100% { transform: scale(var(--duck-scale, 1)) translateY(0); }
+  50%       { transform: scale(var(--duck-scale, 1)) translateY(-5px); }
+}
+.duck { animation: duckBob 0.9s ease-in-out infinite; }
+.duck:nth-child(odd)  { animation-duration: 0.75s; }
+.duck:nth-child(even) { animation-duration: 1.1s; }
+
+@keyframes duckDie {
+  0%   { transform: scale(var(--duck-scale, 1))                   rotate(0deg)   translateY(0);   opacity: 1; }
+  40%  { transform: scale(calc(var(--duck-scale, 1) * 1.5))       rotate(25deg)  translateY(-10px); opacity: 0.9; }
+  100% { transform: scale(0)                                      rotate(180deg) translateY(20px); opacity: 0; }
+}
+.duck.dying { animation: duckDie 0.45s ease-out forwards; }
+
+@keyframes duckWrongFlash {
+  0%, 100% { filter: none; }
+  30% { filter: brightness(4) saturate(0) hue-rotate(0deg); }
+  60% { filter: brightness(2) saturate(2) hue-rotate(180deg); }
+}
+.duck.wrong-flash { animation: duckWrongFlash 0.35s ease-out; }
+
+/* Bonus life duck */
+.duck.bonus {
+  filter: drop-shadow(0 0 8px #FF3377) drop-shadow(0 0 4px #FF88BB);
+  z-index: 9;
+}
+.duck.bonus .duck-label {
+  color: #FF4488;
+  font-size: 30px;
+  text-shadow: 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000,
+               0 0 12px rgba(255,50,150,.9);
+}
+
+/* ── OVERLAY (wave announce / feedback) ─────────────────── */
+.wave-announce {
+  position: fixed; inset: 0; z-index: 300;
+  background: rgba(0,0,0,.82);
+  display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px;
+  pointer-events: none;
+}
+.wave-announce-num  { font-family: var(--vt); font-size: 80px; color: var(--gold); text-shadow: 6px 6px 0 #7A5500; animation: waPop .5s ease-out; }
+.wave-announce-label { font-size: 9px; color: #888; letter-spacing: 4px; }
+.wave-announce-q    { font-family: var(--vt); font-size: 40px; color: white; letter-spacing: 3px; margin-top: 6px; }
+@keyframes waPop { from { transform: scale(2.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.feedback {
+  position: fixed; top: 18%; left: 50%; transform: translateX(-50%);
+  font-size: clamp(18px, 4.5vw, 28px); pointer-events: none; z-index: 200;
+  text-shadow: 3px 3px 0 #000; animation: feedPop .7s ease-out forwards; white-space: nowrap;
+}
+@keyframes feedPop {
+  0%   { opacity: 1; transform: translateX(-50%) scale(1); }
+  55%  { opacity: 1; transform: translateX(-50%) scale(1.3) translateY(-10px); }
+  100% { opacity: 0; transform: translateX(-50%) scale(.8) translateY(-32px); }
+}
+.feedback.good { color: var(--emerald); }
+.feedback.bad  { color: var(--redstone); }
+.feedback.wave-end { color: var(--gold); font-size: clamp(14px, 4vw, 22px); }
+.feedback.bonus { color: #FF4488; font-size: clamp(22px, 5vw, 34px); }
+
+.particle { position: fixed; font-size: 18px; pointer-events: none; z-index: 50; animation: partFly 1.1s ease-out forwards; }
+@keyframes partFly { 0% { opacity: 1; transform: translateY(0) rotate(0); } 100% { opacity: 0; transform: translateY(-80px) rotate(360deg); } }
+
+@keyframes screenFlash { 0%,100%{background:transparent} 50%{background:rgba(255,0,0,.22)} }
+.flash-error { animation: screenFlash .35s; }
+
+/* ── GAME OVER SCREEN ─────────────────────────────────────── */
+.gameover-title {
+  font-size: clamp(14px, 3.5vw, 22px); color: var(--redstone); text-align: center;
+  text-shadow: 4px 4px 0 #660000; animation: bob .9s ease-in-out infinite alternate; letter-spacing: 2px;
+}
+.score-panel {
+  background: #0D1A0D; border: 4px solid var(--emerald); box-shadow: 0 5px 0 #002200;
+  padding: 16px 22px; width: 100%; display: flex; flex-direction: column; gap: 8px;
+}
+.score-row { display: flex; justify-content: space-between; align-items: center; font-family: var(--vt); font-size: 20px; }
+.score-row .slabel { color: #666; }
+.score-row .sval   { color: white; }
+.score-row.total .sval { color: var(--gold); font-size: 28px; }
+.score-divider { border: none; border-top: 2px solid #1A2A1A; margin: 2px 0; }
+
+.name-entry {
+  width: 100%; background: #1A1A1A; border: 4px solid #444;
+  padding: 14px 18px; display: flex; flex-direction: column; gap: 8px; align-items: center;
+}
+.name-entry label { font-size: 7px; color: #666; letter-spacing: 2px; }
+.name-input {
+  background: #111; border: 3px solid var(--gold); color: var(--gold);
+  font-family: var(--pixelfont); font-size: 18px; text-align: center;
+  padding: 8px 14px; width: 100%; max-width: 220px; outline: none; letter-spacing: 4px; text-transform: uppercase;
+}
+
+.leaderboard { width: 100%; background: #080808; border: 3px solid #2A2A2A; padding: 10px 14px; }
+.lb-title { font-size: 8px; color: #444; letter-spacing: 2px; text-align: center; margin-bottom: 8px; }
+.lb-row { display: flex; gap: 8px; align-items: center; font-family: var(--vt); font-size: 19px; padding: 3px 0; border-bottom: 1px solid #0E0E0E; color: #aaa; }
+.lb-row:last-child { border-bottom: none; }
+.lb-row .lb-rank { color: #444; min-width: 22px; }
+.lb-row.lb-gold   .lb-rank, .lb-row.lb-gold   .lb-score { color: var(--gold); }
+.lb-row.lb-silver .lb-rank, .lb-row.lb-silver .lb-score { color: #bbb; }
+.lb-row.lb-bronze .lb-rank, .lb-row.lb-bronze .lb-score { color: #cd7f32; }
+.lb-row.lb-new { color: var(--emerald); }
+.lb-row .lb-name  { flex: 1; }
+.lb-row .lb-score { text-align: right; }
+
+.lb-tabs { display: flex; gap: 4px; width: 100%; margin-bottom: 6px; }
+.lb-tab {
+  flex: 1; background: #0A0A0A; border: 2px solid #222;
+  color: #444; font-family: var(--pixelfont); font-size: 7px;
+  padding: 7px 4px; cursor: pointer; text-align: center; letter-spacing: 1px; transition: all .1s;
+}
+.lb-tab.active  { background: #1A1400; border-color: var(--gold); color: var(--gold); }
+.lb-tab:hover:not(.active) { border-color: #444; color: #888; }
+
+.scores-btn {
+  background: #1A1A0A; border: 4px solid #444400; box-shadow: 0 5px 0 #111100;
+  color: var(--gold); font-family: var(--pixelfont); font-size: 10px;
+  padding: 12px 20px; cursor: pointer; letter-spacing: 2px; transition: all .1s; text-shadow: 2px 2px 0 #000; flex: 1;
+}
+.scores-btn:hover  { background: #2A2A10; border-color: #666600; }
+.scores-btn:active { transform: translateY(5px); box-shadow: none; }
+
+.scores-title { font-size: clamp(14px, 3.5vw, 20px); color: var(--gold); text-shadow: 3px 3px 0 #7A5500; text-align: center; letter-spacing: 2px; }
+.action-btns { display: flex; gap: 10px; width: 100%; }
+.retry-btn {
+  background: #1A3A5A; border: 4px solid #2A6AAA; box-shadow: 0 5px 0 #0A1A2A;
+  color: var(--diamond); font-family: var(--pixelfont); font-size: 8px;
+  padding: 12px 14px; cursor: pointer; flex: 1; letter-spacing: 1px; transition: all .1s;
+}
+.retry-btn:hover  { background: #2A4A7A; }
+.retry-btn:active { transform: translateY(5px); box-shadow: none; }
+.action-btns .play-btn { flex: 1; font-size: 9px; }
+
+/* ── MOBILE CONTROLS ─────────────────────────────────────── */
+#mobile-controls {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: 140px; z-index: 400; pointer-events: none;
+}
+
+#joystick-base {
+  position: absolute; bottom: 28px; left: 36px;
+  width: 84px; height: 84px; border-radius: 50%;
+  background: rgba(255,255,255,.08);
+  border: 3px solid rgba(255,255,255,.22);
+  pointer-events: all;
+}
+#joystick-knob {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 38px; height: 38px; border-radius: 50%;
+  background: rgba(255,255,255,.4);
+  border: 2px solid rgba(255,255,255,.7);
+  transition: transform .05s;
+}
+
+#btn-fire {
+  position: absolute; bottom: 24px; right: 36px;
+  width: 94px; height: 94px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #9A2020, #5A0000);
+  border: 4px solid #FF3300;
+  color: white; font-size: 32px;
+  font-family: var(--pixelfont);
+  pointer-events: all;
+  box-shadow: 0 4px 0 #330000, 0 0 20px rgba(255,50,0,.35);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+#btn-fire:active { transform: scale(.92); }
+
+@media (pointer: coarse) {
+  #mobile-controls { display: block; }
+  #screen-game.active { padding-bottom: 145px; }
+  #app { padding-bottom: 145px; }
+}
+
+/* ── RESPONSIVE ──────────────────────────────────────────── */
+@media (max-width: 480px) {
+  #app { padding: 12px 10px 56px; }
+  .menu-panel { padding: 14px 12px; gap: 8px; }
+  .mode-btn { padding: 10px; gap: 10px; }
+  .mode-btn .btn-icon { font-size: 22px; }
+  .table-btn { font-size: 8px; min-height: 40px; }
+  .score-panel { padding: 12px 14px; }
+  .score-row { font-size: 17px; }
+  .action-btns { flex-direction: column; }
+}
+@media (max-height: 600px) and (orientation: landscape) {
+  .game-arena { height: clamp(200px, 60vw, 300px); }
+  .screen.active { gap: 8px; }
+}
+</style>
+</head>
+<body>
+<div class="ground"></div>
+<div id="app">
+
+  <!-- ══════════ TITLE ══════════ -->
+  <div id="screen-title" class="screen active">
+    <div class="title-logo">
+      <span class="line1">💀 DEAD DUCKS 💀</span>
+      <span class="line2">TIRE SUR LE BON RÉSULTAT !</span>
+    </div>
+    <div style="font-size:52px;text-align:center;animation:bob 1.8s ease-in-out infinite alternate;filter:drop-shadow(3px 3px 0 rgba(0,0,0,.8))">🦆🧟🔫</div>
+
+    <div class="menu-panel">
+      <div class="panel-title">— OPÉRATION —</div>
+      <button class="mode-btn active-mode" id="btn-mul" onclick="selectOp('mul')">
+        <span class="btn-icon">✖️</span>
+        <span>TABLES ×<span class="btn-desc">Tire sur la bonne multiplication</span></span>
+      </button>
+      <button class="mode-btn" id="btn-add" onclick="selectOp('add')">
+        <span class="btn-icon">➕</span>
+        <span>ADDITIONS +<span class="btn-desc">Tire sur la bonne addition</span></span>
+      </button>
+    </div>
+
+    <div class="menu-panel">
+      <div class="panel-title" id="table-panel-title">— QUELLE TABLE ? —</div>
+      <div class="table-grid" id="table-selector"></div>
+    </div>
+
+    <div id="top3-display" class="top-scores-mini"></div>
+    <div class="action-btns">
+      <button class="scores-btn" onclick="showScoresScreen()">🏆 SCORES</button>
+      <button class="play-btn" id="play-btn" onclick="startGame()" disabled style="flex:2">▶ JOUER</button>
+    </div>
+    <button class="retry-btn" onclick="location.href='index.html'" style="width:100%">← ARCADE</button>
+  </div>
+
+  <!-- ══════════ GAME ══════════ -->
+  <div id="screen-game" class="screen">
+    <div class="duck-hud">
+      <div class="duck-hud-top">
+        <div class="hud-wave"  id="hud-wave">VAGUE 1</div>
+        <div class="hud-lives" id="hud-lives"></div>
+        <div class="hud-score" id="hud-score">0</div>
+      </div>
+      <div class="duck-hud-question">
+        <div class="question-txt" id="question-display">? × ? = ?</div>
+      </div>
+    </div>
+
+    <div class="game-arena" id="game-arena">
+      <div class="arena-sky"></div>
+      <div class="arena-fog"></div>
+      <div class="arena-moon"></div>
+      <!-- dead trees injected by JS -->
+      <!-- graves injected by JS -->
+      <div class="arena-ground"></div>
+      <div id="hunter"></div>
+    </div>
+  </div>
+
+  <!-- ══════════ GAME OVER ══════════ -->
+  <div id="screen-gameover" class="screen">
+    <div class="gameover-title" id="gameover-title">💀 PARTIE TERMINÉE !</div>
+    <div style="font-size:56px;text-align:center">🦆💀</div>
+
+    <div class="score-panel">
+      <div class="score-row"><span class="slabel">Niveau atteint</span><span class="sval" id="stat-wave">0</span></div>
+      <div class="score-row"><span class="slabel">Canards abattus</span><span class="sval" id="stat-hits">0</span></div>
+      <div class="score-row"><span class="slabel">Tirs ratés / erreurs</span><span class="sval" id="stat-errors" style="color:var(--redstone)">0</span></div>
+      <hr class="score-divider">
+      <div class="score-row total"><span class="slabel">SCORE FINAL</span><span class="sval" id="stat-total">0</span></div>
+    </div>
+
+    <div class="name-entry" id="name-entry-zone">
+      <label>TON NOM DE CHASSEUR (3 lettres)</label>
+      <input type="text" class="name-input" id="name-input" maxlength="3" placeholder="AAA" autocomplete="off">
+      <button class="play-btn" id="save-btn" onclick="saveScore()" style="padding:10px">💾 ENREGISTRER</button>
+    </div>
+
+    <div class="lb-tabs">
+      <button class="lb-tab lb-table-tab active"  data-filter="all"    onclick="setLBFilter('all','leaderboard')">TOUT</button>
+      <button class="lb-tab lb-table-tab"          data-filter="single" onclick="setLBFilter('single','leaderboard')">1 TABLE</button>
+      <button class="lb-tab lb-table-tab"          data-filter="multi"  onclick="setLBFilter('multi','leaderboard')">MULTI</button>
+      <button class="lb-tab lb-table-tab"          data-filter="toutes" onclick="setLBFilter('toutes','leaderboard')">TOUTES</button>
+    </div>
+    <div class="leaderboard" id="leaderboard"></div>
+
+    <div class="action-btns">
+      <button class="retry-btn" onclick="retryGame()">🔄 REJOUER</button>
+      <button class="play-btn"  onclick="goHome()">🏠 MENU</button>
+    </div>
+  </div>
+
+  <!-- ══════════ SCORES ══════════ -->
+  <div id="screen-scores" class="screen">
+    <div class="scores-title">🏆 MEILLEURS CHASSEURS</div>
+    <div class="lb-tabs">
+      <button class="lb-tab lb-table-tab active"  data-filter="all"    onclick="setLBFilter('all','leaderboard-scores')">TOUT</button>
+      <button class="lb-tab lb-table-tab"          data-filter="single" onclick="setLBFilter('single','leaderboard-scores')">1 TABLE</button>
+      <button class="lb-tab lb-table-tab"          data-filter="multi"  onclick="setLBFilter('multi','leaderboard-scores')">MULTI</button>
+      <button class="lb-tab lb-table-tab"          data-filter="toutes" onclick="setLBFilter('toutes','leaderboard-scores')">TOUTES</button>
+    </div>
+    <div class="leaderboard" id="leaderboard-scores">
+      <div style="font-family:var(--vt);font-size:17px;color:#333;text-align:center;padding:16px">chargement...</div>
+    </div>
+    <button class="retry-btn" onclick="showScreen('screen-title')" style="width:100%">← RETOUR AU MENU</button>
+  </div>
+
+</div>
+
+<!-- Mobile controls (fixed overlay) -->
+<div id="mobile-controls">
+  <div id="joystick-base">
+    <div id="joystick-knob"></div>
+  </div>
+  <button id="btn-fire">🔫</button>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════════════════════════════
+const BIN_ID  = '6a071ea9adc21f119aa499ab';
+const BIN_KEY = '$2a$10$MivuzmyH7rz.Re4YYd7wWOktE5kbJzWp/KG6IeFaTTDnYNW77qS3W';
+const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
+// ══════════════════════════════════════════════════════════════
+//  ⚙️  PARAMÈTRES — modifiez ici pour ajuster la jouabilité
+// ══════════════════════════════════════════════════════════════
+
+// ── JOUEUR & CONTRÔLES ────────────────────────────────────
+const LIVES_START            = 3;
+const HUNTER_SPEED           = 0.20;    // px/ms — vitesse du chasseur
+const BULLET_SPEED_PX        = 0.55;    // px/ms — vitesse des balles
+const BULLET_COOLDOWN_MS     = 290;     // ms entre chaque tir
+const MAX_BULLETS            = 4;       // balles simultanées max à l'écran
+const JOYSTICK_RADIUS        = 34;
+
+// ── SCORE ─────────────────────────────────────────────────
+const SCORE_PER_CORRECT      = 100;     // points par bonne réponse (× niveau)
+
+// ── GÉOMÉTRIE ARENA ───────────────────────────────────────
+const DUCK_W                 = 72;      // px largeur canard (hitbox de base)
+const DUCK_H                 = 48;      // px hauteur canard
+const HUNTER_W               = 40;
+const HUNTER_H               = 56;
+const GROUND_H               = 28;     // px bande de sol en bas d'arène
+const LANES_PCT              = [20, 33, 46, 59, 72]; // % hauteur ciel (bas→haut)
+
+// ── COURBE DE DIFFICULTÉ (niveaux 1 → LEVEL_MAX) ─────────
+//    Le niveau monte toutes les HITS_PER_LEVEL bonnes réponses.
+//    Tous les paramètres ci-dessous évoluent linéairement entre
+//    leur valeur niveau-1 et leur valeur niveau-max.
+const HITS_PER_LEVEL         = 10;     // bonnes réponses pour monter d'un niveau
+const LEVEL_MAX              = 20;     // niveau maximum
+
+//  Nombre de canards leurres par vague (+ 1 canard correct = total)
+const DECOYS_LVL1            = 1;      // 1 leurre au niveau 1  → 2 canards total
+const DECOYS_MAX             = 6;      // 6 leurres au niveau 20 → 7 canards total
+
+//  Vitesse des canards
+const DUCK_SPEED_LVL1        = 0.07;   // px/ms au niveau 1
+const DUCK_SPEED_LVL_MAX     = 0.28;   // px/ms au niveau 20
+const DUCK_SPEED_VARIANCE    = 0.030;  // dispersion aléatoire ±vitesse par canard
+
+//  Étalement du spawn des canards dans une vague
+const SPAWN_INTERVAL_LVL1    = 1200;   // ms d'étalement au niveau 1 (canards plus espacés)
+const SPAWN_INTERVAL_MIN     = 280;    // ms d'étalement minimum (niveau max)
+
+//  Probabilité d'avoir un petit canard (plus dur à toucher)
+const SMALL_DUCK_CHANCE_LVL1 = 0.10;  // 10 % de chances au niveau 1
+const SMALL_DUCK_CHANCE_MAX  = 0.50;  // 50 % de chances au niveau 20
+
+// ── CANARD BONUS ❤️ (vie supplémentaire) ─────────────────
+const BONUS_DUCK_SPEED_MULT  = 1.8;   // multiplicateur de vitesse vs vitesse courante
+const BONUS_DUCK_SCALE       = 0.62;  // taille (plus petit = plus difficile)
+
+// ══════════════════════════════════════════════════════════════
+
+const EMOJIS_WIN  = ['💥','⭐','🎯','✨','🔥','💎'];
+const EMOJIS_LOSE = ['💀','🦆','😵','🩸','❌'];
+
+// ══════════════════════════════════════════════════════════════
+//  AUDIO
+// ══════════════════════════════════════════════════════════════
+let _ctx = null;
+function _ac() {
+  if (!_ctx) _ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (_ctx.state === 'suspended') _ctx.resume();
+  return _ctx;
+}
+function _tone(freq, dur, type='square', vol=0.10, t0=0) {
+  try {
+    const ctx = _ac(), now = ctx.currentTime;
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = type; osc.frequency.setValueAtTime(freq, now + t0);
+    gain.gain.setValueAtTime(vol, now + t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + t0 + dur);
+    osc.start(now + t0); osc.stop(now + t0 + dur + 0.02);
+  } catch(e) {}
+}
+function sfxShoot()        { _tone(880,.04,'square',.06); _tone(660,.06,'square',.04,.04); }
+function sfxCorrect()      { _tone(523,.07,'square',.10); _tone(659,.07,'square',.10,.07); _tone(784,.14,'square',.10,.14); }
+function sfxWrong()        { _tone(180,.07,'sawtooth',.14); _tone(130,.16,'sawtooth',.12,.07); }
+function sfxEscape()       { _tone(330,.08,'sawtooth',.10); _tone(220,.14,'sawtooth',.10,.08); }
+function sfxWaveComplete() { [523,659,784,1047].forEach((f,i) => _tone(f,.09,'square',.10,i*.07)); }
+function sfxBonus()        { [1047,1319,1568,2093].forEach((f,i) => _tone(f,.08,'sine',.13,i*.06)); }
+function sfxGameOver()     { [440,370,294,220,165].forEach((f,i) => _tone(f,.22,'sawtooth',.11,i*.20)); }
+function sfxCountdown()    { _tone(440,.08,'square',.12); }
+function sfxGo()           { _tone(659,.07,'square',.14); _tone(784,.07,'square',.14,.07); _tone(1047,.2,'square',.13,.14); }
+
+// ══════════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════════
+let G = {};
+function resetState() {
+  G = {
+    op: 'mul', tables: [], lastOp: 'mul', lastTables: [],
+    level: 1, lives: LIVES_START, score: 0, hits: 0, combo: 0, errors: 0,
+    question: null,
+    gameRunning: false,
+    gameOver: false,
+    rafId: null, lastTime: 0,
+    bulletCooldown: 0,
+    keysHeld: { left: false, right: false },
+    joystickDx: 0,
+  };
+}
+resetState();
+
+let hunterX = 0;        // px, left edge of hunter within arena
+let bullets  = [];      // { el, cx, y }  cx=center-x, y=top
+let ducks    = [];      // { el, x, y, speed, dir, isCorrect, number, id, bobPhase, dead }
+let duckIdCounter = 0;
+let pendingSpawns = []; // setTimeout IDs for staggered duck spawns
+let _tcScores = [];     // preserve Times Craft scores when writing bin
+
+// ══════════════════════════════════════════════════════════════
+//  SCREENS
+// ══════════════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  LEADERBOARD
+// ══════════════════════════════════════════════════════════════
+let _lb = [];
+let _lbFilter = 'all';
+
+async function fetchLB() {
+  try {
+    const r = await fetch(BIN_URL + '/latest', { headers: { 'X-Master-Key': BIN_KEY } });
+    const d = await r.json();
+    _lb = d.record?.deadDucks || [];
+    _tcScores = d.record?.scores || [];
+  } catch {
+    try { _lb = JSON.parse(localStorage.getItem('dd_lb') || '[]'); } catch {}
+  }
+  return _lb;
+}
+
+async function pushLB(lb) {
+  try {
+    await fetch(BIN_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Key': BIN_KEY },
+      body: JSON.stringify({ scores: _tcScores, deadDucks: lb }),
+    });
+    localStorage.setItem('dd_lb', JSON.stringify(lb));
+  } catch { localStorage.setItem('dd_lb', JSON.stringify(lb)); }
+}
+
+async function addScore(name, score, table) {
+  await fetchLB();
+  _lb.push({ name: name.toUpperCase().padEnd(3,'?').slice(0,3), score, table, date: Date.now() });
+  _lb.sort((a,b) => b.score - a.score);
+  _lb = _lb.slice(0, 20);
+  await pushLB(_lb);
+  return _lb;
+}
+
+function getFilteredLB() {
+  if (_lbFilter === 'single') return _lb.filter(e => e.table && !String(e.table).includes('+') && String(e.table).toUpperCase() !== 'ALL');
+  if (_lbFilter === 'multi')  return _lb.filter(e => e.table && String(e.table).includes('+'));
+  if (_lbFilter === 'toutes') return _lb.filter(e => String(e.table).toUpperCase() === 'ALL');
+  return _lb;
+}
+
+function renderLB(newEntry, targetId) {
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  const data = getFilteredLB();
+  el.innerHTML = '<div class="lb-title">— MEILLEURS CHASSEURS 🌍 —</div>';
+  if (!data.length) {
+    el.innerHTML += '<div style="font-family:var(--vt);font-size:17px;color:#333;text-align:center;padding:8px">Pas encore de scores</div>';
+    return;
+  }
+  data.slice(0, 10).forEach((e, i) => {
+    const row = document.createElement('div');
+    const isNew = newEntry && e.name === newEntry.name && e.score === newEntry.score;
+    row.className = 'lb-row' + (i===0?' lb-gold':i===1?' lb-silver':i===2?' lb-bronze':'') + (isNew?' lb-new':'');
+    const tTag = e.table ? String(e.table).toUpperCase() : '?';
+    row.innerHTML = `<span class="lb-rank">${i+1}.</span><span class="lb-name">${e.name}</span><span style="font-size:11px;color:#444">×${tTag}</span><span class="lb-score">${e.score}</span>`;
+    el.appendChild(row);
+  });
+}
+
+function setLBFilter(f, targetId) {
+  _lbFilter = f;
+  document.querySelectorAll('.lb-table-tab').forEach(t => t.classList.toggle('active', t.dataset.filter === f));
+  renderLB(null, targetId);
+}
+
+async function showScoresScreen() {
+  showScreen('screen-scores');
+  const el = document.getElementById('leaderboard-scores');
+  el.innerHTML = '<div style="font-family:var(--vt);font-size:17px;color:#333;text-align:center;padding:16px">chargement...</div>';
+  await fetchLB();
+  renderLB(null, 'leaderboard-scores');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  TITLE SCREEN LOGIC
+// ══════════════════════════════════════════════════════════════
+function initTableSelector() {
+  const el = document.getElementById('table-selector');
+  el.innerHTML = '';
+  for (let i = 1; i <= 10; i++) {
+    const b = document.createElement('button');
+    b.className = 'table-btn'; b.textContent = '×' + i; b.dataset.table = i;
+    b.onclick = () => selectTable(i);
+    el.appendChild(b);
+  }
+  const mb = document.createElement('button');
+  mb.className = 'table-btn table-btn-master'; mb.dataset.table = 'all';
+  mb.textContent = '⚔ TOUTES LES TABLES'; mb.onclick = () => selectTable('all');
+  el.appendChild(mb);
+  renderTop3();
+  G.op = 'mul';
+  document.getElementById('btn-mul').classList.add('active-mode');
+}
+
+async function renderTop3() {
+  const el = document.getElementById('top3-display');
+  el.innerHTML = '<span style="color:#333">chargement...</span>';
+  await fetchLB();
+  if (!_lb.length) { el.textContent = ''; return; }
+  el.innerHTML = _lb.slice(0,3).map((e,i) =>
+    `<span>${['🥇','🥈','🥉'][i]} ${e.name}</span> <span>${e.score}</span>`
+  ).join('  ');
+}
+
+function selectOp(op) {
+  G.op = op;
+  document.getElementById('btn-mul').classList.toggle('active-mode', op === 'mul');
+  document.getElementById('btn-add').classList.toggle('active-mode', op === 'add');
+  document.getElementById('table-panel-title').textContent = op === 'add' ? '— QUEL NOMBRE ? —' : '— QUELLE TABLE ? —';
+  checkReady();
+}
+
+function selectTable(t) {
+  if (t === 'all') {
+    const allSel = [1,2,3,4,5,6,7,8,9,10].every(i => G.tables.includes(i));
+    G.tables = allSel ? [] : [1,2,3,4,5,6,7,8,9,10];
+  } else {
+    const idx = G.tables.indexOf(t);
+    if (idx >= 0) G.tables.splice(idx, 1); else G.tables.push(t);
+  }
+  document.querySelectorAll('.table-btn').forEach(b => {
+    const v = b.dataset.table;
+    if (v === 'all') b.classList.toggle('selected', [1,2,3,4,5,6,7,8,9,10].every(i => G.tables.includes(i)));
+    else b.classList.toggle('selected', G.tables.includes(parseInt(v)));
+  });
+  checkReady();
+}
+
+function checkReady() {
+  document.getElementById('play-btn').disabled = !(G.op && G.tables.length > 0);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  GAME INIT
+// ══════════════════════════════════════════════════════════════
+function startGame() {
+  const op = G.op, tables = G.tables.slice();
+  resetState();
+  G.op = op; G.tables = tables;
+  G.lastOp = op; G.lastTables = tables.slice();
+  showScreen('screen-game');
+  buildArenaDecorations();
+  hunterX = (getArenaW() - HUNTER_W) / 2;
+  document.getElementById('hunter').innerHTML = HUNTER_SVG;
+  positionHunter();
+  renderLives();
+  showCountdown(() => {
+    G.gameRunning = true;
+    G.lastTime = performance.now();
+    G.rafId = requestAnimationFrame(gameLoop);
+    newQuestion();
+    spawnBatch();
+  });
+}
+
+function retryGame() { startGame(); }
+function goHome() {
+  stopGame();
+  G.op = G.lastOp; G.tables = G.lastTables ? G.lastTables.slice() : [];
+  showScreen('screen-title');
+  document.getElementById('btn-mul').classList.toggle('active-mode', G.op !== 'add');
+  document.getElementById('btn-add').classList.toggle('active-mode', G.op === 'add');
+  document.getElementById('table-panel-title').textContent = G.op === 'add' ? '— QUEL NOMBRE ? —' : '— QUELLE TABLE ? —';
+  document.querySelectorAll('.table-btn').forEach(b => {
+    const v = b.dataset.table;
+    if (v === 'all') b.classList.toggle('selected', G.tables.length === 10);
+    else b.classList.toggle('selected', G.tables.includes(parseInt(v)));
+  });
+  checkReady();
+  renderTop3();
+}
+
+function stopGame() {
+  G.gameRunning = false;
+  if (G.rafId) cancelAnimationFrame(G.rafId);
+  clearPendingSpawns();
+  clearBullets(); clearDucks();
+  unbindKeys();
+}
+
+function showCountdown(cb) {
+  let n = 3; sfxCountdown();
+  const ov = document.createElement('div');
+  ov.className = 'wave-announce';
+  ov.innerHTML = `<div class="wave-announce-num">${n}</div><div class="wave-announce-label">PRÊT À TIRER ?</div>`;
+  document.body.appendChild(ov);
+  const t = setInterval(() => {
+    n--;
+    if (n <= 0) { clearInterval(t); ov.remove(); sfxGo(); bindKeys(); cb(); return; }
+    sfxCountdown();
+    const el = ov.querySelector('.wave-announce-num');
+    el.textContent = n; el.style.animation = 'none'; void el.offsetWidth; el.style.animation = 'waPop .5s ease-out';
+  }, 850);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  GAME LOOP (rAF)
+// ══════════════════════════════════════════════════════════════
+function gameLoop(ts) {
+  if (!G.gameRunning) return;
+  const dt = Math.min(ts - G.lastTime, 50);
+  G.lastTime = ts;
+
+  const arenaW = getArenaW();
+  const arenaH = getArenaH();
+
+  // bullet cooldown
+  G.bulletCooldown = Math.max(0, G.bulletCooldown - dt);
+
+  // move hunter
+  const moveDir = G.keysHeld.left ? -1 : G.keysHeld.right ? 1 : G.joystickDx;
+  if (moveDir !== 0) {
+    hunterX = clamp(hunterX + moveDir * HUNTER_SPEED * dt, 0, arenaW - HUNTER_W);
+  }
+  positionHunter();
+
+  // move bullets
+  const toRemoveBullets = [];
+  for (let i = 0; i < bullets.length; i++) {
+    const b = bullets[i];
+    b.y -= BULLET_SPEED_PX * dt;
+    b.el.style.top = b.y + 'px';
+    if (b.y < -20) { b.el.remove(); toRemoveBullets.push(i); continue; }
+
+    // check collision with ducks
+    let hit = false;
+    for (const d of ducks) {
+      if (d.dead) continue;
+      const dw = DUCK_W * d.scale, dh = DUCK_H * d.scale;
+      const dx = d.x + (DUCK_W - dw) * 0.5, dy = d.y + (DUCK_H - dh) * 0.5;
+      if (aabbHit(b.cx - 2, b.y, 5, 16, dx, dy, dw, dh)) {
+        handleHit(d, b);
+        b.el.remove(); toRemoveBullets.push(i); hit = true; break;
+      }
+    }
+    if (hit) continue;
+  }
+  for (let i = toRemoveBullets.length - 1; i >= 0; i--) bullets.splice(toRemoveBullets[i], 1);
+
+  // move ducks + bobbing
+  const toRemoveDucks = [];
+  for (let i = 0; i < ducks.length; i++) {
+    const d = ducks[i];
+    if (d.dead) { toRemoveDucks.push(i); continue; }
+    d.x += d.speed * d.dir * dt;
+    const bob = Math.sin(ts / 500 + d.bobPhase) * 5;
+    d.el.style.left = d.x + 'px';
+    d.el.style.top  = (d.y + bob) + 'px';
+
+    // off screen ?
+    if (d.x < -DUCK_W - 10 || d.x > arenaW + 10) {
+      if (d.isBonus)   { if (d.el.parentNode) d.el.remove(); }
+      else if (d.isCorrect) { handleCorrectEscape(d); }
+      else             { if (d.el.parentNode) d.el.remove(); }
+      toRemoveDucks.push(i);
+    }
+  }
+  for (let i = toRemoveDucks.length - 1; i >= 0; i--) ducks.splice(toRemoveDucks[i], 1);
+
+  G.rafId = requestAnimationFrame(gameLoop);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  HUNTER
+// ══════════════════════════════════════════════════════════════
+function getArenaW() { return document.getElementById('game-arena').clientWidth || 400; }
+function getArenaH() { return document.getElementById('game-arena').clientHeight || 300; }
+function positionHunter() {
+  document.getElementById('hunter').style.left = (hunterX + HUNTER_W / 2) + 'px';
+}
+
+// ══════════════════════════════════════════════════════════════
+//  BULLETS
+// ══════════════════════════════════════════════════════════════
+function spawnBullet() {
+  if (!G.gameRunning || bullets.length >= MAX_BULLETS || G.bulletCooldown > 0) return;
+  G.bulletCooldown = BULLET_COOLDOWN_MS;
+  sfxShoot();
+  const arenaH = getArenaH();
+  const cx = hunterX + HUNTER_W / 2;
+  const y  = arenaH - GROUND_H - HUNTER_H - 4;
+  const el = document.createElement('div');
+  el.className = 'bullet';
+  el.style.left = (cx - 2) + 'px';
+  el.style.top  = y + 'px';
+  document.getElementById('game-arena').appendChild(el);
+  bullets.push({ el, cx, y });
+}
+
+function clearBullets() {
+  bullets.forEach(b => b.el.remove()); bullets = [];
+}
+
+// ══════════════════════════════════════════════════════════════
+//  DUCKS
+// ══════════════════════════════════════════════════════════════
+function calcLaneY(lane, arenaH) {
+  const skyH = arenaH - GROUND_H;
+  const fromGround = (LANES_PCT[lane] / 100) * skyH;
+  return arenaH - GROUND_H - fromGround - DUCK_H;
+}
+
+function spawnDuck(cfg) {
+  if (!G.gameRunning) return;
+  const arena = document.getElementById('game-arena');
+  const arenaW = getArenaW();
+  const arenaH = getArenaH();
+  const scale = cfg.scale || 1.0;
+
+  const el = document.createElement('div');
+  let cls = 'duck' + (cfg.dir === -1 ? ' rtl' : '');
+  if (cfg.isBonus) cls += ' bonus';
+  if (String(cfg.number).length >= 3) cls += ' big-num';
+  el.className = cls;
+  el.style.setProperty('--duck-scale', String(scale));
+  el.innerHTML = `<div class="duck-sprite">${DUCK_SVG}</div><div class="duck-label">${cfg.number}</div>`;
+
+  const startX = cfg.dir === 1 ? -DUCK_W - 5 : arenaW + 5;
+  const y = calcLaneY(cfg.lane, arenaH);
+  el.style.left = startX + 'px';
+  el.style.top  = y + 'px';
+  arena.appendChild(el);
+
+  ducks.push({
+    id: ++duckIdCounter,
+    el, x: startX, y,
+    speed: cfg.speed,
+    dir: cfg.dir,
+    lane: cfg.lane,
+    isCorrect: cfg.isCorrect,
+    isBonus: cfg.isBonus || false,
+    number: cfg.number,
+    scale,
+    bobPhase: Math.random() * Math.PI * 2,
+    dead: false,
+  });
+}
+
+function clearDucks() {
+  ducks.forEach(d => { if (d.el && d.el.parentNode) d.el.remove(); });
+  ducks = [];
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ARCADE CONTINUOUS SPAWNER
+// ══════════════════════════════════════════════════════════════
+function getCurrentSpeed() {
+  const t = (G.level - 1) / (LEVEL_MAX - 1);          // 0.0 → 1.0 sur 20 niveaux
+  return DUCK_SPEED_LVL1 + t * (DUCK_SPEED_LVL_MAX - DUCK_SPEED_LVL1);
+}
+
+function getCurrentInterval() {
+  const t = (G.level - 1) / (LEVEL_MAX - 1);
+  return Math.max(SPAWN_INTERVAL_LVL1 - t * (SPAWN_INTERVAL_LVL1 - SPAWN_INTERVAL_MIN), SPAWN_INTERVAL_MIN);
+}
+
+function getCurrentDecoys() {
+  const t = (G.level - 1) / (LEVEL_MAX - 1);
+  return Math.round(DECOYS_LVL1 + t * (DECOYS_MAX - DECOYS_LVL1));
+}
+
+function getCurrentSmallDuckChance() {
+  const t = (G.level - 1) / (LEVEL_MAX - 1);
+  return SMALL_DUCK_CHANCE_LVL1 + t * (SMALL_DUCK_CHANCE_MAX - SMALL_DUCK_CHANCE_LVL1);
+}
+
+function clearPendingSpawns() {
+  pendingSpawns.forEach(clearTimeout); pendingSpawns = [];
+}
+
+function newQuestion() {
+  const tableNum = G.tables[Math.floor(Math.random() * G.tables.length)];
+  const b = 1 + Math.floor(Math.random() * 10);
+  const opSym = G.op === 'add' ? '+' : '×';
+  const answer = G.op === 'add' ? tableNum + b : tableNum * b;
+  G.question = { a: tableNum, b, answer, opSym };
+  // Re-tag surviving ducks (skip bonus ducks)
+  ducks.forEach(d => { if (!d.dead && !d.isBonus) d.isCorrect = (d.number === answer); });
+  updateHUD();
+}
+
+function spawnBatch() {
+  if (!G.gameRunning || G.gameOver) return;
+  const speed = getCurrentSpeed();
+  const numDecoys = getCurrentDecoys();
+  const decoys = makeDecoys(G.question.answer, numDecoys, G.question.a, G.op);
+
+  // Avoid duplicate correct duck if one already re-tagged on screen
+  const hasCorrectOnScreen = ducks.some(d => !d.dead && d.isCorrect);
+  const allNums = hasCorrectOnScreen ? [...decoys] : [G.question.answer, ...decoys];
+  shuffle(allNums);
+
+  const stagger = getCurrentInterval() / allNums.length;
+  allNums.forEach((num, i) => {
+    const id = setTimeout(() => {
+      if (!G.gameRunning || G.gameOver) return;
+      const dir = Math.random() > 0.5 ? 1 : -1;
+      const lane = Math.floor(Math.random() * LANES_PCT.length);
+      // Probabilité de petit canard croît avec le niveau
+      const scale = Math.random() < getCurrentSmallDuckChance() ? 0.65 + Math.random() * 0.15 : 1.0;
+      spawnDuck({
+        number: num,
+        isCorrect: num === G.question.answer,
+        lane, dir,
+        speed: speed + (Math.random() - 0.5) * DUCK_SPEED_VARIANCE,
+        scale,
+      });
+    }, i * stagger);
+    pendingSpawns.push(id);
+  });
+}
+
+function spawnBonusDuck() {
+  if (!G.gameRunning || G.gameOver || G.lives !== 1) return;
+  if (ducks.some(d => !d.dead && d.isBonus)) return; // one at a time
+  const dir = Math.random() > 0.5 ? 1 : -1;
+  const lane = Math.floor(Math.random() * LANES_PCT.length);
+  spawnDuck({
+    number: '❤️',
+    isCorrect: false,
+    isBonus: true,
+    lane, dir,
+    speed: getCurrentSpeed() * BONUS_DUCK_SPEED_MULT + 0.05,
+    scale: BONUS_DUCK_SCALE,
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  COLLISION & RESULT HANDLERS
+// ══════════════════════════════════════════════════════════════
+function aabbHit(ax, ay, aw, ah, bx, by, bw, bh) {
+  return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+}
+
+function handleHit(duck, bullet) {
+  duck.dead = true;
+  if (duck.isBonus)        { bonusHit(duck); }
+  else if (duck.isCorrect) { correctHit(duck); }
+  else                     { wrongHit(duck); }
+}
+
+function bonusHit(duck) {
+  sfxBonus();
+  duck.el.classList.add('dying');
+  setTimeout(() => { if (duck.el && duck.el.parentNode) duck.el.remove(); }, 500);
+  G.lives = Math.min(G.lives + 1, LIVES_START);
+  renderLives();
+  showFeedback('❤️ +1 VIE !', 'bonus');
+  spawnParticles(true, 8, duck.x + DUCK_W * duck.scale / 2, duck.y + DUCK_H * duck.scale / 2);
+}
+
+function correctHit(duck) {
+  sfxCorrect();
+  duck.el.classList.add('dying');
+  setTimeout(() => { if (duck.el.parentNode) duck.el.remove(); }, 500);
+  G.hits++;
+  G.combo++;
+  G.level = Math.min(1 + Math.floor(G.hits / HITS_PER_LEVEL), LEVEL_MAX);
+  const pts = SCORE_PER_CORRECT * G.level;
+  G.score += pts;
+  updateHUD();
+  const bonusMsg = G.combo >= 3 ? ' 🔥×' + G.combo : '';
+  showFeedback('+' + pts + bonusMsg + ' 🎯', 'good');
+  spawnParticles(true, 5, duck.x + DUCK_W / 2, duck.y + DUCK_H / 2);
+  if (G.hits % HITS_PER_LEVEL === 0) { sfxWaveComplete(); showFeedback('🔥 NIV. ' + G.level + ' !', 'wave-end'); }
+  clearPendingSpawns();
+  newQuestion();
+  spawnBatch();
+  // Spawn bonus life duck when player is on last life
+  if (G.lives === 1 && !ducks.some(d => !d.dead && d.isBonus)) {
+    const id = setTimeout(() => { if (G.gameRunning && !G.gameOver) spawnBonusDuck(); },
+      1200 + Math.random() * 1000);
+    pendingSpawns.push(id);
+  }
+}
+
+function wrongHit(duck) {
+  sfxWrong();
+  duck.el.classList.add('wrong-flash');
+  setTimeout(() => { if (duck.el.parentNode) duck.el.remove(); }, 400);
+  G.combo = 0;
+  loseLife('✗ MAUVAIS CANARD!');
+}
+
+function handleCorrectEscape(duck) {
+  if (duck.el && duck.el.parentNode) duck.el.remove();
+  sfxEscape();
+  G.combo = 0;
+  loseLife('✗ CANARD ENFUI!');
+
+  if (G.gameOver || !G.gameRunning) return;
+  // Respawn the correct duck after a short delay (same question)
+  const id = setTimeout(() => {
+    if (!G.gameRunning || G.gameOver) return;
+    const dir = Math.random() > 0.5 ? 1 : -1;
+    const lane = Math.floor(Math.random() * LANES_PCT.length);
+    spawnDuck({ number: G.question.answer, isCorrect: true, lane, dir, speed: getCurrentSpeed() });
+  }, 800);
+  pendingSpawns.push(id);
+}
+
+function loseLife(msg) {
+  G.lives--;
+  G.errors++;
+  renderLives();
+  showFeedback(msg, 'bad');
+  flashApp();
+  spawnParticles(false, 3, getArenaW() / 2, getArenaH() / 2);
+  if (G.lives <= 0) {
+    setTimeout(() => gameOver(), 400);
+    return;
+  }
+  // On last life, schedule a bonus duck soon (if none already pending/on-screen)
+  if (G.lives === 1 && !ducks.some(d => !d.dead && d.isBonus)) {
+    const id = setTimeout(() => { if (G.gameRunning && !G.gameOver) spawnBonusDuck(); },
+      1500 + Math.random() * 1000);
+    pendingSpawns.push(id);
+  }
+}
+
+function gameOver() {
+  if (G.gameOver) return;
+  G.gameOver = true;
+  stopGame();
+  sfxGameOver();
+  spawnParticles(false, 6, getArenaW() / 2, getArenaH() / 2);
+
+  setTimeout(() => {
+    document.getElementById('stat-wave').textContent  = G.level;
+    document.getElementById('stat-hits').textContent  = G.hits;
+    document.getElementById('stat-errors').textContent = G.errors;
+    document.getElementById('stat-total').textContent = G.score;
+    document.getElementById('name-input').value = '';
+    document.getElementById('name-entry-zone').style.display = 'flex';
+    const sb = document.getElementById('save-btn');
+    sb.disabled = false; sb.textContent = '💾 ENREGISTRER';
+    showScreen('screen-gameover');
+    fetchLB().then(() => renderLB(null, 'leaderboard'));
+  }, 900);
+}
+
+async function saveScore() {
+  const name = document.getElementById('name-input').value.trim();
+  if (!name) { document.getElementById('name-input').focus(); return; }
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true; btn.textContent = '⏳ ENVOI...';
+  const tableStr = G.lastTables.length === 1 ? String(G.lastTables[0]) : G.lastTables.length === 10 ? 'ALL' : G.lastTables.join('+');
+  const entry = { name: name.toUpperCase().slice(0,3), score: G.score, table: tableStr };
+  await addScore(entry.name, entry.score, entry.table);
+  renderLB(entry, 'leaderboard');
+  document.getElementById('name-entry-zone').style.display = 'none';
+  spawnParticles(true, 8, window.innerWidth / 2, window.innerHeight / 3);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  HUD
+// ══════════════════════════════════════════════════════════════
+function updateHUD() {
+  document.getElementById('hud-wave').textContent  = 'NIV. ' + G.level;
+  document.getElementById('hud-score').textContent = G.score;
+  if (G.question) {
+    const q = G.question;
+    document.getElementById('question-display').innerHTML =
+      `${q.a} <span class="op">${q.opSym}</span> ${q.b} <span class="eq">=</span> <span class="qm">?</span>`;
+  }
+}
+
+function renderLives() {
+  const el = document.getElementById('hud-lives');
+  el.innerHTML = '';
+  for (let i = 0; i < LIVES_START; i++) {
+    const h = document.createElement('div');
+    h.className = 'heart' + (i >= G.lives ? ' lost' : '');
+    el.appendChild(h);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  FEEDBACK / FX
+// ══════════════════════════════════════════════════════════════
+function showFeedback(msg, type) {
+  const el = document.createElement('div');
+  el.className = 'feedback ' + type; el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 800);
+}
+
+function flashApp() {
+  const a = document.getElementById('app');
+  a.classList.remove('flash-error'); void a.offsetWidth; a.classList.add('flash-error');
+  setTimeout(() => a.classList.remove('flash-error'), 400);
+}
+
+function spawnParticles(good, count, px, py) {
+  const pool = good ? EMOJIS_WIN : EMOJIS_LOSE;
+  for (let i = 0; i < count; i++) setTimeout(() => {
+    const p = document.createElement('div'); p.className = 'particle';
+    p.textContent = pool[Math.floor(Math.random() * pool.length)];
+    p.style.left = (px - 20 + Math.random() * 40) + 'px';
+    p.style.top  = (py - 20 + Math.random() * 20) + 'px';
+    document.body.appendChild(p); setTimeout(() => p.remove(), 1200);
+  }, i * 60);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ARENA DECORATIONS
+// ══════════════════════════════════════════════════════════════
+function buildArenaDecorations() {
+  const arena = document.getElementById('game-arena');
+  // Remove old decorations
+  arena.querySelectorAll('.dead-tree,.grave').forEach(el => el.remove());
+
+  // Left tree
+  const t1 = document.createElement('div'); t1.className = 'dead-tree';
+  t1.style.left = '4px';
+  t1.innerHTML = TREE_SVG_L;
+  arena.insertBefore(t1, arena.querySelector('.arena-ground'));
+
+  // Right tree
+  const t2 = document.createElement('div'); t2.className = 'dead-tree';
+  t2.style.right = '4px';
+  t2.innerHTML = TREE_SVG_R;
+  arena.insertBefore(t2, arena.querySelector('.arena-ground'));
+
+  // Graves
+  const gravePositions = [18, 35, 65, 82]; // % from left
+  gravePositions.forEach(pct => {
+    const g = document.createElement('div'); g.className = 'grave';
+    g.style.left = pct + '%';
+    g.innerHTML = GRAVE_SVG;
+    arena.insertBefore(g, arena.querySelector('.arena-ground'));
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  CONTROLS — KEYBOARD
+// ══════════════════════════════════════════════════════════════
+function _onKD(e) {
+  if (e.key === 'ArrowLeft'  || e.key === 'a') G.keysHeld.left  = true;
+  if (e.key === 'ArrowRight' || e.key === 'd') G.keysHeld.right = true;
+  if (e.key === ' ' || e.key === 'Space') { e.preventDefault(); spawnBullet(); }
+}
+function _onKU(e) {
+  if (e.key === 'ArrowLeft'  || e.key === 'a') G.keysHeld.left  = false;
+  if (e.key === 'ArrowRight' || e.key === 'd') G.keysHeld.right = false;
+}
+function bindKeys()   { document.addEventListener('keydown', _onKD); document.addEventListener('keyup', _onKU); }
+function unbindKeys() { document.removeEventListener('keydown', _onKD); document.removeEventListener('keyup', _onKU); }
+
+// ══════════════════════════════════════════════════════════════
+//  CONTROLS — MOBILE JOYSTICK + FIRE
+// ══════════════════════════════════════════════════════════════
+(function setupMobile() {
+  const base = document.getElementById('joystick-base');
+  const knob = document.getElementById('joystick-knob');
+  const fire = document.getElementById('btn-fire');
+
+  let joystickTouchId = null;
+  let joystickOriginX = 0;
+
+  function updateKnob(dx) {
+    const clamped = clamp(dx, -JOYSTICK_RADIUS, JOYSTICK_RADIUS);
+    G.joystickDx = clamped / JOYSTICK_RADIUS;
+    knob.style.transform = `translate(calc(-50% + ${clamped}px), -50%)`;
+  }
+
+  base.addEventListener('touchstart', e => {
+    if (joystickTouchId !== null) return;
+    joystickTouchId = e.changedTouches[0].identifier;
+    joystickOriginX = e.changedTouches[0].clientX;
+    updateKnob(0);
+    e.preventDefault();
+  }, { passive: false });
+
+  document.addEventListener('touchmove', e => {
+    if (joystickTouchId === null) return;
+    for (const t of e.changedTouches) {
+      if (t.identifier === joystickTouchId) {
+        updateKnob(t.clientX - joystickOriginX);
+        e.preventDefault(); return;
+      }
+    }
+  }, { passive: false });
+
+  document.addEventListener('touchend', e => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === joystickTouchId) {
+        joystickTouchId = null;
+        G.joystickDx = 0;
+        knob.style.transform = 'translate(-50%, -50%)';
+      }
+    }
+  });
+
+  let fireInterval = null;
+  fire.addEventListener('touchstart', e => {
+    e.preventDefault();
+    spawnBullet();
+    if (fireInterval) clearInterval(fireInterval);
+    fireInterval = setInterval(spawnBullet, BULLET_COOLDOWN_MS);
+  }, { passive: false });
+  fire.addEventListener('touchend',   () => { if (fireInterval) { clearInterval(fireInterval); fireInterval = null; } });
+  fire.addEventListener('touchcancel',() => { if (fireInterval) { clearInterval(fireInterval); fireInterval = null; } });
+})();
+
+// ══════════════════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════════════════
+function clamp(v, min, max) { return v < min ? min : v > max ? max : v; }
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+function makeDecoys(correct, count, tableA, op) {
+  const s = new Set([correct]);
+  let attempts = 0;
+  while (s.size < count + 1 && attempts < 200) {
+    attempts++;
+    if (op === 'add') {
+      const d = 1 + Math.floor(Math.random() * 7);
+      const f = correct + (Math.random() > 0.5 ? d : -d);
+      if (f > 0) s.add(f);
+    } else {
+      const fakeB = 1 + Math.floor(Math.random() * 10);
+      const fake  = tableA * fakeB;
+      if (fake !== correct) s.add(fake);
+      const d = 1 + Math.floor(Math.random() * 6);
+      const f = correct + (Math.random() > 0.5 ? d : -d);
+      if (f > 0) s.add(f);
+    }
+  }
+  return Array.from(s).filter(x => x !== correct).slice(0, count);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  SVG ASSETS
+// ══════════════════════════════════════════════════════════════
+
+// Zombie duck — facing RIGHT by default (flipped with CSS for RTL)
+const DUCK_SVG = `<svg width="72" height="48" viewBox="0 0 36 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- tail -->
+  <polygon points="2,12 0,9 0,17 2,14" fill="#1B4A0C"/>
+  <!-- wing -->
+  <ellipse cx="14" cy="11" rx="8" ry="3" fill="#2D5A14" transform="rotate(-10 14 11)"/>
+  <!-- body -->
+  <ellipse cx="16" cy="17" rx="13" ry="7" fill="#3A6E1A"/>
+  <!-- neck -->
+  <rect x="24" y="11" width="4" height="5" fill="#44801E" rx="1"/>
+  <!-- head -->
+  <circle cx="28" cy="8" r="6" fill="#44801E"/>
+  <!-- zombie X-eye -->
+  <line x1="25" y1="5" x2="28" y2="8" stroke="#DD1100" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="28" y1="5" x2="25" y2="8" stroke="#DD1100" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- eye 2 (normal, slightly dazed) -->
+  <circle cx="31" cy="7" r="1.5" fill="white"/>
+  <circle cx="31.5" cy="7.5" r=".8" fill="#330000"/>
+  <!-- bill -->
+  <polygon points="33,7 33,11 36,9" fill="#E07800"/>
+  <!-- tongue -->
+  <ellipse cx="34.5" cy="11.5" rx="1" ry=".7" fill="#CC2200"/>
+  <!-- body stitch -->
+  <line x1="10" y1="13" x2="10" y2="21" stroke="#1A3A08" stroke-width="1.2"/>
+  <line x1="8"  y1="15" x2="12" y2="15" stroke="#1A3A08" stroke-width="1.2"/>
+  <line x1="8"  y1="18" x2="12" y2="18" stroke="#1A3A08" stroke-width="1.2"/>
+  <!-- feet -->
+  <polygon points="8,24 6,24 5,23 9,23" fill="#2A5A0A"/>
+  <polygon points="20,24 18,24 17,23 21,23" fill="#2A5A0A"/>
+</svg>`;
+
+// Zombie hunter — gun pointing up
+const HUNTER_SVG = `<svg width="40" height="56" viewBox="0 0 20 28" xmlns="http://www.w3.org/2000/svg">
+  <!-- hat crown -->
+  <rect x="5" y="0" width="10" height="4" fill="#2A1A08"/>
+  <!-- hat brim -->
+  <rect x="3" y="4" width="14" height="2" fill="#3A2510"/>
+  <!-- head -->
+  <rect x="5" y="6" width="10" height="8" fill="#C8E6A0"/>
+  <!-- zombie red eyes -->
+  <rect x="6" y="8" width="3" height="2" fill="#DD0000"/>
+  <rect x="11" y="8" width="3" height="2" fill="#DD0000"/>
+  <!-- eye glows -->
+  <rect x="7" y="8" width="1" height="1" fill="#FF4444"/>
+  <rect x="12" y="8" width="1" height="1" fill="#FF4444"/>
+  <!-- mouth -->
+  <rect x="7" y="12" width="5" height="1" fill="#557733"/>
+  <!-- neck -->
+  <rect x="8" y="14" width="2" height="2" fill="#A8C880"/>
+  <!-- body / jacket -->
+  <rect x="4" y="16" width="12" height="8" fill="#2A4020"/>
+  <!-- jacket detail -->
+  <rect x="9" y="16" width="2" height="7" fill="#1A2A10"/>
+  <!-- arm holding gun (right) -->
+  <rect x="13" y="16" width="5" height="2" fill="#A8C880"/>
+  <!-- gun grip -->
+  <rect x="16" y="14" width="2" height="4" fill="#444"/>
+  <!-- gun body -->
+  <rect x="14" y="12" width="5" height="3" fill="#555"/>
+  <!-- gun barrel (pointing up) -->
+  <rect x="15" y="2" width="2" height="11" fill="#666"/>
+  <!-- barrel tip flash area -->
+  <rect x="15" y="1" width="2" height="2" fill="#888"/>
+  <!-- other arm -->
+  <rect x="0" y="17" width="4" height="2" fill="#A8C880"/>
+  <!-- belt -->
+  <rect x="4" y="23" width="12" height="2" fill="#4A3A10"/>
+  <!-- legs -->
+  <rect x="5"  y="24" width="4" height="4" fill="#1A2A10"/>
+  <rect x="11" y="24" width="4" height="4" fill="#1A2A10"/>
+</svg>`;
+
+// Dead tree — left side
+const TREE_SVG_L = `<svg width="48" height="80" viewBox="0 0 24 40" xmlns="http://www.w3.org/2000/svg">
+  <rect x="10" y="15" width="4" height="25" fill="#1A1A0A"/>
+  <rect x="6"  y="20" width="4" height="2"  fill="#1A1A0A"/>
+  <rect x="2"  y="18" width="4" height="2"  fill="#1A1A0A"/>
+  <rect x="14" y="17" width="7" height="2"  fill="#1A1A0A"/>
+  <rect x="18" y="15" width="4" height="2"  fill="#1A1A0A"/>
+  <rect x="14" y="25" width="5" height="2"  fill="#1A1A0A"/>
+  <rect x="8"  y="28" width="4" height="2"  fill="#1A1A0A"/>
+  <rect x="10" y="5"  width="3" height="12" fill="#1A1A0A"/>
+  <rect x="8"  y="8"  width="4" height="1"  fill="#1A1A0A"/>
+  <rect x="13" y="10" width="4" height="1"  fill="#1A1A0A"/>
+</svg>`;
+
+// Dead tree — right side (mirror)
+const TREE_SVG_R = `<svg width="48" height="80" viewBox="0 0 24 40" xmlns="http://www.w3.org/2000/svg" style="transform:scaleX(-1)">
+  <rect x="10" y="15" width="4" height="25" fill="#1A1A0A"/>
+  <rect x="6"  y="20" width="4" height="2"  fill="#1A1A0A"/>
+  <rect x="2"  y="18" width="4" height="2"  fill="#1A1A0A"/>
+  <rect x="14" y="17" width="7" height="2"  fill="#1A1A0A"/>
+  <rect x="18" y="15" width="4" height="2"  fill="#1A1A0A"/>
+  <rect x="14" y="25" width="5" height="2"  fill="#1A1A0A"/>
+  <rect x="8"  y="28" width="4" height="2"  fill="#1A1A0A"/>
+  <rect x="10" y="5"  width="3" height="12" fill="#1A1A0A"/>
+  <rect x="8"  y="8"  width="4" height="1"  fill="#1A1A0A"/>
+  <rect x="13" y="10" width="4" height="1"  fill="#1A1A0A"/>
+</svg>`;
+
+// Tombstone
+const GRAVE_SVG = `<svg width="20" height="28" viewBox="0 0 10 14" xmlns="http://www.w3.org/2000/svg">
+  <rect x="1" y="6" width="8" height="8" fill="#1A1A1A"/>
+  <rect x="0" y="5" width="10" height="2" fill="#222"/>
+  <rect x="2" y="0" width="6" height="7" rx="3" fill="#1A1A1A"/>
+  <rect x="2" y="0" width="6" height="7" rx="3" fill="none" stroke="#333" stroke-width="1"/>
+  <rect x="4" y="2" width="2" height="1" fill="#333"/>
+  <rect x="4" y="4" width="2" height="1" fill="#333"/>
+</svg>`;
+
+// ══════════════════════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════════════════════
+initTableSelector();
+</script>
+</body>
+</html>
